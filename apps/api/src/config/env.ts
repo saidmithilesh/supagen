@@ -26,7 +26,11 @@ export type Env = z.infer<typeof envSchema>;
 export function getEnvFilePath() {
   const fileName =
     process.env.SUPAGEN_API_ENV_FILE ??
-    (process.env.NODE_ENV === "production" ? ".env.production" : ".env.local");
+    (process.env.NODE_ENV === "production"
+      ? ".env.production"
+      : process.env.NODE_ENV === "test"
+        ? ".env.test"
+        : ".env.local");
 
   return join(getApiRootPath(), fileName);
 }

@@ -1,11 +1,13 @@
 import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import request from "supertest";
 
 import { AppModule } from "./app.module";
 
 describe("App health endpoint", () => {
   let app: INestApplication;
+  let config: ConfigService;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -13,6 +15,7 @@ describe("App health endpoint", () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
+    config = moduleRef.get(ConfigService);
     await app.init();
   });
 
@@ -25,5 +28,11 @@ describe("App health endpoint", () => {
       status: "ok",
       service: "supagen-api",
     });
+  });
+
+  it("loads the test environment", () => {
+    expect(config.getOrThrow<string>("DATABASE_URL")).toContain(
+      "localhost:15432",
+    );
   });
 });
