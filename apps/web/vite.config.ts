@@ -30,6 +30,18 @@ export default defineConfig({
           path: "/models",
           prerender: { enabled: true, outputPath: "/models/index.html" },
         },
+        {
+          path: "/pricing",
+          prerender: { enabled: true, outputPath: "/pricing/index.html" },
+        },
+        {
+          path: "/privacy",
+          prerender: { enabled: true, outputPath: "/privacy/index.html" },
+        },
+        {
+          path: "/terms",
+          prerender: { enabled: true, outputPath: "/terms/index.html" },
+        },
       ],
     }),
     react(),

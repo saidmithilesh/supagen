@@ -8,9 +8,38 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import {
+  applySupagenTheme,
+  getSupagenThemeInitScript,
+  resolveSupagenTheme,
+} from "../theme/supagen-theme";
 
 import appCss from "@supagen/ui/globals.css?url";
+
+export const SUPAGEN_SITE_URL = "https://supagen.dev/";
+export const SUPAGEN_META_TITLE =
+  "Supagen — The Backend for AI Features & Agents";
+export const SUPAGEN_META_DESCRIPTION =
+  "Build faster without hardcoding prompts, model logic, and observability into your app. One integration point for prompts, routing, observability, and cost tracking across every LLM.";
+export const SUPAGEN_SOCIAL_IMAGE = "https://supagen.dev/supagen-og-image.png";
+
+export const X_CONVERSION_TRACKING_SCRIPT = `!(function (e, t, n, s, u, a) {
+  e.twq ||
+    ((s = e.twq =
+      function () {
+        s.exe ? s.exe.apply(s, arguments) : s.queue.push(arguments);
+      }),
+    (s.version = "1.1"),
+    (s.queue = []),
+    (u = t.createElement(n)),
+    (u.async = true),
+    (u.src = "https://static.ads-twitter.com/uwt.js"),
+    (a = t.getElementsByTagName(n)[0]),
+    a.parentNode.insertBefore(u, a));
+})(window, document, "script");
+twq("config", "rboc6");`;
 
 export const Route = createRootRoute({
   head: () => ({
@@ -18,15 +47,34 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       {
-        title: "Supagen",
+        title: SUPAGEN_META_TITLE,
       },
       {
         name: "description",
-        content:
-          "Supagen is a multi-modal AI gateway for product teams and solo founders.",
+        content: SUPAGEN_META_DESCRIPTION,
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: SUPAGEN_SITE_URL },
+      { property: "og:site_name", content: "Supagen" },
+      { property: "og:title", content: SUPAGEN_META_TITLE },
+      { property: "og:description", content: SUPAGEN_META_DESCRIPTION },
+      {
+        property: "og:image",
+        content: SUPAGEN_SOCIAL_IMAGE,
+      },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:url", content: SUPAGEN_SITE_URL },
+      { name: "twitter:title", content: SUPAGEN_META_TITLE },
+      { name: "twitter:description", content: SUPAGEN_META_DESCRIPTION },
+      {
+        name: "twitter:image",
+        content: SUPAGEN_SOCIAL_IMAGE,
       },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "icon", type: "image/svg+xml", href: "/logo.svg" },
+      { rel: "stylesheet", href: appCss },
+    ],
   }),
   component: RootComponent,
   notFoundComponent: () => (
@@ -72,14 +120,33 @@ export function RootProviders({ children }: { children: ReactNode }) {
 
 function RootDocument({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: getSupagenThemeInitScript() }}
+        />
+        <script
+          dangerouslySetInnerHTML={{ __html: X_CONVERSION_TRACKING_SCRIPT }}
+        />
         <HeadContent />
       </head>
       <body>
+        <SupagenThemeRuntime />
         <RootProviders>{children}</RootProviders>
         <Scripts />
       </body>
     </html>
   );
+}
+
+function SupagenThemeRuntime() {
+  useEffect(() => {
+    applySupagenTheme(
+      resolveSupagenTheme(window.localStorage, window.matchMedia),
+      document.documentElement,
+    );
+  }, []);
+
+  return null;
 }
