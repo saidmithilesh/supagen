@@ -3,6 +3,11 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@supagen/ui/*": ["../../packages/ui/src/*"]
+    },
     "types": [
       "vite/client",
       "node",

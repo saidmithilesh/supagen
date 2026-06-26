@@ -1,5 +1,10 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "CLERK_PUBLISHABLE_KEY",
+    "CLERK_SECRET_KEY",
+    "VITE_SUPAGEN_API_URL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

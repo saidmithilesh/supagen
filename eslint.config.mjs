@@ -12,7 +12,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["apps/api/**/*.ts", "packages/**/*.ts"],
+    files: ["apps/api/**/*.ts", "packages/shared/**/*.ts"],
     languageOptions: {
       globals: globals.node,
     },
@@ -33,7 +33,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["apps/web/**/*.{ts,tsx}"],
+    files: ["apps/web/**/*.{ts,tsx}", "packages/ui/**/*.{ts,tsx}"],
     languageOptions: {
       globals: globals.browser,
     },
@@ -45,7 +45,16 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": [
         "warn",
-        { allowConstantExport: true },
+        {
+          allowConstantExport: true,
+          allowExportNames: [
+            "Route",
+            "badgeVariants",
+            "buttonVariants",
+            "normalizeAuthSearch",
+            "tabsListVariants",
+          ],
+        },
       ],
     },
   },
