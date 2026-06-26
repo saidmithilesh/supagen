@@ -9,11 +9,29 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root";
+import { Route as TermsRouteImport } from "./routes/terms";
+import { Route as PrivacyRouteImport } from "./routes/privacy";
+import { Route as PricingRouteImport } from "./routes/pricing";
 import { Route as ModelsRouteImport } from "./routes/models";
 import { Route as AuthRouteImport } from "./routes/auth";
 import { Route as AppRouteImport } from "./routes/app";
 import { Route as IndexRouteImport } from "./routes/index";
 
+const TermsRoute = TermsRouteImport.update({
+  id: "/terms",
+  path: "/terms",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: "/privacy",
+  path: "/privacy",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const PricingRoute = PricingRouteImport.update({
+  id: "/pricing",
+  path: "/pricing",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const ModelsRoute = ModelsRouteImport.update({
   id: "/models",
   path: "/models",
@@ -40,12 +58,18 @@ export interface FileRoutesByFullPath {
   "/app": typeof AppRoute;
   "/auth": typeof AuthRoute;
   "/models": typeof ModelsRoute;
+  "/pricing": typeof PricingRoute;
+  "/privacy": typeof PrivacyRoute;
+  "/terms": typeof TermsRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
   "/app": typeof AppRoute;
   "/auth": typeof AuthRoute;
   "/models": typeof ModelsRoute;
+  "/pricing": typeof PricingRoute;
+  "/privacy": typeof PrivacyRoute;
+  "/terms": typeof TermsRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -53,13 +77,31 @@ export interface FileRoutesById {
   "/app": typeof AppRoute;
   "/auth": typeof AuthRoute;
   "/models": typeof ModelsRoute;
+  "/pricing": typeof PricingRoute;
+  "/privacy": typeof PrivacyRoute;
+  "/terms": typeof TermsRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: "/" | "/app" | "/auth" | "/models";
+  fullPaths:
+    | "/"
+    | "/app"
+    | "/auth"
+    | "/models"
+    | "/pricing"
+    | "/privacy"
+    | "/terms";
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/app" | "/auth" | "/models";
-  id: "__root__" | "/" | "/app" | "/auth" | "/models";
+  to: "/" | "/app" | "/auth" | "/models" | "/pricing" | "/privacy" | "/terms";
+  id:
+    | "__root__"
+    | "/"
+    | "/app"
+    | "/auth"
+    | "/models"
+    | "/pricing"
+    | "/privacy"
+    | "/terms";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -67,10 +109,34 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRoute;
   AuthRoute: typeof AuthRoute;
   ModelsRoute: typeof ModelsRoute;
+  PricingRoute: typeof PricingRoute;
+  PrivacyRoute: typeof PrivacyRoute;
+  TermsRoute: typeof TermsRoute;
 }
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
+    "/terms": {
+      id: "/terms";
+      path: "/terms";
+      fullPath: "/terms";
+      preLoaderRoute: typeof TermsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/privacy": {
+      id: "/privacy";
+      path: "/privacy";
+      fullPath: "/privacy";
+      preLoaderRoute: typeof PrivacyRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/pricing": {
+      id: "/pricing";
+      path: "/pricing";
+      fullPath: "/pricing";
+      preLoaderRoute: typeof PricingRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/models": {
       id: "/models";
       path: "/models";
@@ -107,6 +173,9 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRoute,
   AuthRoute: AuthRoute,
   ModelsRoute: ModelsRoute,
+  PricingRoute: PricingRoute,
+  PrivacyRoute: PrivacyRoute,
+  TermsRoute: TermsRoute,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

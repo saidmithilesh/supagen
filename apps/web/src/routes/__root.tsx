@@ -8,7 +8,13 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import {
+  applySupagenTheme,
+  getSupagenThemeInitScript,
+  resolveSupagenTheme,
+} from "../theme/supagen-theme";
 
 import appCss from "@supagen/ui/globals.css?url";
 
@@ -25,8 +31,22 @@ export const Route = createRootRoute({
         content:
           "Supagen is a multi-modal AI gateway for product teams and solo founders.",
       },
+      { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Supagen" },
+      {
+        property: "og:image",
+        content: "https://supagen.dev/supagen-og-image.png",
+      },
+      { name: "twitter:card", content: "summary_large_image" },
+      {
+        name: "twitter:image",
+        content: "https://supagen.dev/supagen-og-image.png",
+      },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "icon", type: "image/svg+xml", href: "/logo.svg" },
+      { rel: "stylesheet", href: appCss },
+    ],
   }),
   component: RootComponent,
   notFoundComponent: () => (
@@ -72,14 +92,30 @@ export function RootProviders({ children }: { children: ReactNode }) {
 
 function RootDocument({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: getSupagenThemeInitScript() }}
+        />
         <HeadContent />
       </head>
       <body>
+        <SupagenThemeRuntime />
         <RootProviders>{children}</RootProviders>
         <Scripts />
       </body>
     </html>
   );
+}
+
+function SupagenThemeRuntime() {
+  useEffect(() => {
+    applySupagenTheme(
+      resolveSupagenTheme(window.localStorage, window.matchMedia),
+      document.documentElement,
+    );
+  }, []);
+
+  return null;
 }

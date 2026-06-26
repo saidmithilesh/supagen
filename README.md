@@ -135,10 +135,29 @@ corresponding backend surface exists.
 
 Shared UI primitives live in `packages/ui` as `@supagen/ui`. Use shadcn
 components before creating custom UI primitives; install new shadcn components
-with the CLI when needed. Icons must come from lucide. Future Supagen-specific
-fonts, colors, radii, and semantic design tokens should be added through
-`packages/ui/src/styles/globals.css` and shadcn/Tailwind CSS variables, not
-hardcoded in route components.
+with the CLI when needed. Icons must come from lucide unless a future user
+instruction explicitly changes the icon system.
+
+Supagen's web design language lives in
+`packages/ui/src/styles/globals.css`. Fonts are bundled with the app through
+Fontsource packages, not loaded from Google Fonts at runtime. The canonical
+faces are BE Vietnam Pro for UI text and JetBrains Mono for technical/code
+surfaces. The supported themes are `light`, `dark`, and `dark-warm`; theme
+selection is persisted with the `supagen-theme` local storage key and applied to
+the document root.
+
+Use semantic shadcn/Tailwind tokens such as `bg-background`, `bg-surface`,
+`text-muted-foreground`, `border-border`, and the status token families
+`success`, `warning`, `error`, and `info`. Do not hardcode route/component
+colors when a semantic token exists. Future Supagen-specific colors, radii,
+typography, spacing, shadows, and semantic design tokens should be added through
+`packages/ui/src/styles/globals.css` and shadcn/Tailwind CSS variables.
+
+Public marketing pages may use scoped typography tokens in
+`apps/web/src/styles/homepage.css` to preserve Supagen's legacy marketing-page
+design language, including non-zero letter-spacing. Keep those values behind
+named page tokens and do not copy hardcoded tracking values into route
+components or product-app UI.
 
 ### Local Infra Conventions
 
