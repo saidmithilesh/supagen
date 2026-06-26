@@ -144,7 +144,7 @@ export function AuthPanel({
             <span>Supagen</span>
           </a>
 
-          <div className="flex max-w-[680px] flex-col gap-5 flex-end">
+          <div className="flex max-w-[680px] flex-col gap-5">
             <h1 className="font-heading text-4xl leading-tight font-semibold tracking-normal">
               Build AI features without wiring
               <br />
@@ -155,6 +155,11 @@ export function AuthPanel({
               routing, keys, observability, usage, and end-user AI consumption.
             </p>
           </div>
+
+          <p className="max-w-md text-sm leading-6 text-muted-foreground">
+            Ship experiments quickly. Keep the operational details visible as
+            your AI stack grows.
+          </p>
         </div>
       </section>
 
