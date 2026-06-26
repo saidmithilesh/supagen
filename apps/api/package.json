@@ -7,7 +7,12 @@
     "build": "nest build",
     "start": "node dist/main.js",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.drizzle.json",
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
+    "db:push": "drizzle-kit push --config drizzle.config.ts",
+    "db:studio": "drizzle-kit studio --config drizzle.config.ts",
+    "db:check": "drizzle-kit check --config drizzle.config.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.27",
@@ -15,6 +20,8 @@
     "@nestjs/core": "^11.1.27",
     "@nestjs/platform-express": "^11.1.27",
     "@supagen/shared": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^4.4.3"
@@ -22,6 +29,10 @@
   "devDependencies": {
     "@nestjs/cli": "^11.0.23",
     "@types/node": "^26.0.1",
+    "@types/pg": "^8.20.0",
+    "dotenv": "^17.4.2",
+    "dotenv-expand": "^13.0.0",
+    "drizzle-kit": "^0.31.10",
     "ts-node": "^10.9.2"
   }
 }

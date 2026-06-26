@@ -24,7 +24,110 @@ pnpm dev
 pnpm build
 pnpm lint
 pnpm typecheck
+pnpm db:check
 ```
+
+## Project Conventions
+
+These conventions are the default guidance for future coding agent sessions.
+
+### API Module Organization
+
+Backend code should be organized by domain under `apps/api/src/domains`. Each
+domain owns its public module boundary and may contain subdomains when the
+responsibility boundary is meaningful.
+
+Use this layered shape inside a domain when the behavior justifies it:
+
+```txt
+domains/<domain>/
+  <domain>.module.ts
+  presentation/      # controllers and transport-specific DTOs
+  application/       # use cases, orchestration, transaction boundaries
+  domain/            # business rules, domain types, pure domain services
+  infrastructure/    # repositories, Drizzle access, external clients
+```
+
+Do not make every folder a Nest module by default. Add submodules only when
+they provide a real dependency-injection boundary or exported API. Keep
+repositories private to their owning domain; other domains should call exported
+application services or react to events.
+
+### Application Services, Repositories, And Transactions
+
+Controllers should stay thin. Application services own use cases and coordinate
+domain services, repositories, permissions, and transactions. Repositories own
+data access only and should not start business transactions themselves.
+
+Cross-service database transactions should use the `UnitOfWork` provider from
+`apps/api/src/infrastructure/database`. The top-level application use case starts
+the Drizzle transaction and passes the transaction context or DB executor to all
+participating services and repositories.
+
+Avoid broad request-wide transactions, and never hold a Postgres transaction
+open across calls to external systems. For work that continues outside the
+database, prefer an outbox or saga-style follow-up after commit.
+
+### Drizzle And Migrations
+
+Drizzle schema files should live with the domain that owns the tables, for
+example `apps/api/src/domains/**/**/*.schema.ts`. Do not centralize all schemas
+into one shared schema folder.
+
+Use one migration stream per database. For the API database, Drizzle Kit is
+configured in `apps/api/drizzle.config.ts`, reads domain schema files with a
+glob, and writes migrations to `apps/api/drizzle`.
+
+The migration workflow is:
+
+```sh
+pnpm db:generate
+# review generated SQL
+pnpm db:migrate
+```
+
+Use `drizzle-kit push` only for short-lived local prototyping, not for shared
+staging or production schema changes. Commit both schema changes and generated
+migration files. Do not run migrations automatically from API application
+startup.
+
+### Config And Secrets
+
+API env files live in `apps/api`. Track `apps/api/.env.example`; keep
+`apps/api/.env.local` and `apps/api/.env.production` gitignored. The API loads
+`.env.local` by default, `.env.production` when the Node process starts with
+`NODE_ENV=production`, and an explicit file when `SUPAGEN_API_ENV_FILE` is set.
+
+Use Nest `ConfigModule` and `ConfigService` instead of reading `process.env`
+throughout the codebase. Infrastructure modules, such as database or provider
+client modules, should consume config and provide already-configured clients to
+domain/application code.
+
+### Local Infra Conventions
+
+Run local infra with Docker Compose and run the API directly on the host for
+fast iteration. Docker Compose should read `apps/api/.env.local`, making it the
+local source of truth for both infra bootstrap values and API connection URLs.
+
+Use the `supagen-infra` Compose project with explicit named volumes. Keep local
+services on their default ports unless there is a deliberate reason to change
+them.
+
+## Database Workflow
+
+Drizzle is wired for the API package. The database provider and transaction
+helpers live in `apps/api/src/infrastructure/database`.
+
+```sh
+pnpm db:check
+pnpm db:generate
+pnpm db:migrate
+pnpm db:studio
+```
+
+`pnpm db:check` validates the current migration metadata. There are no domain
+schemas yet, so no table migrations are expected until a domain adds its first
+`*.schema.ts` file.
 
 ## Local Infra
 
@@ -54,10 +157,6 @@ delete those volumes.
 ## API Environment
 
 API env files live in `apps/api` and are gitignored.
-
-```sh
-cp apps/api/.env.example apps/api/.env.local
-```
 
 By default, the API loads `apps/api/.env.local`. When the Node process starts
 with `NODE_ENV=production`, it loads `apps/api/.env.production` instead. Set
