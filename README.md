@@ -13,8 +13,9 @@ This workspace was initialized locally with Node.js `v24.17.0`, Corepack `0.35.0
 ## Workspace
 
 - `apps/api`: NestJS backend
-- `apps/web`: React + Vite frontend
+- `apps/web`: TanStack Start frontend
 - `packages/shared`: shared TypeScript types and utilities
+- `packages/ui`: shared shadcn/Tailwind UI primitives and design tokens
 
 ## Commands
 
@@ -110,6 +111,35 @@ throughout the codebase. Infrastructure modules, such as database or provider
 client modules, should consume config and provide already-configured clients to
 domain/application code.
 
+Web env files live in `apps/web`. Track `apps/web/.env.example`; keep real web
+env files such as `apps/web/.env.local` gitignored. TanStack Start and Clerk use
+`CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. Client-side API calls should use
+`VITE_SUPAGEN_API_URL`.
+
+### Web Application
+
+The web app uses TanStack Start with Vite. Public SEO-oriented pages should be
+prerenderable static routes where practical. The authenticated application
+surface lives under `/app/*`; public pages such as `/` and `/models` must remain
+accessible without auth.
+
+Authentication is Clerk-only. Do not build custom credential handling, password
+flows, token storage, or session management. Use Clerk's TanStack Start SDK,
+`clerkMiddleware()`, `ClerkProvider`, and route guards based on Clerk `auth()`.
+The `/auth` route may own UI state such as sign-in vs sign-up mode, but Clerk
+owns the auth flow.
+
+Server state in the web app should use TanStack Query. Add Zustand only when a
+specific local state need exists. Do not introduce API hooks before the
+corresponding backend surface exists.
+
+Shared UI primitives live in `packages/ui` as `@supagen/ui`. Use shadcn
+components before creating custom UI primitives; install new shadcn components
+with the CLI when needed. Icons must come from lucide. Future Supagen-specific
+fonts, colors, radii, and semantic design tokens should be added through
+`packages/ui/src/styles/globals.css` and shadcn/Tailwind CSS variables, not
+hardcoded in route components.
+
 ### Local Infra Conventions
 
 Run local infra with Docker Compose and run the API directly on the host for
@@ -134,9 +164,9 @@ unit tests, and `*.integration-spec.ts` or `*.integration-test.ts(x)` for
 integration tests.
 
 CI is a verification gate, not a deployment pipeline. It should install from the
-lockfile, prepare the local API env file from `apps/api/.env.example`, and run
-formatting, Drizzle checks, typechecking, linting, unit tests, and builds. CI
-does not run integration tests.
+lockfile, prepare local env files from `apps/api/.env.example` and
+`apps/web/.env.example`, and run formatting, Drizzle checks, typechecking,
+linting, unit tests, and builds. CI does not run integration tests.
 
 ## Testing Workflow
 

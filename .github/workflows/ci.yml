@@ -35,6 +35,9 @@ jobs:
       - name: Prepare API environment
         run: cp apps/api/.env.example apps/api/.env.local
 
+      - name: Prepare web environment
+        run: cp apps/web/.env.example apps/web/.env.local
+
       - name: Check formatting
         run: pnpm format:check
 
