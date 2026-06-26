@@ -26,6 +26,31 @@ pnpm lint
 pnpm typecheck
 ```
 
+## Local Infra
+
+Local Postgres and Valkey run through Docker Compose under the
+`supagen-infra` project. The API still runs directly on the host machine.
+
+```sh
+pnpm infra:up
+pnpm infra:ps
+pnpm infra:logs
+pnpm infra:down
+```
+
+The containers bind to the default local ports:
+
+- Postgres: `localhost:5432`
+- Valkey: `localhost:6379`
+
+Data is persisted in explicit Docker named volumes:
+
+- `supagen-postgres-data`
+- `supagen-valkey-data`
+
+Use `pnpm infra:reset` only when you intentionally want to stop infra and
+delete those volumes.
+
 ## API Environment
 
 API env files live in `apps/api` and are gitignored.

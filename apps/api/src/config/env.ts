@@ -8,7 +8,16 @@ const envSchema = z.object({
     .enum(["development", "test", "production"])
     .default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
-  DATABASE_URL: z.url().optional(),
+  POSTGRES_HOST: z.string().min(1),
+  POSTGRES_PORT: z.coerce.number().int().min(1).max(65535).default(5432),
+  POSTGRES_DB: z.string().min(1),
+  POSTGRES_USER: z.string().min(1),
+  POSTGRES_PASSWORD: z.string().min(1),
+  DATABASE_URL: z.url(),
+  VALKEY_HOST: z.string().min(1),
+  VALKEY_PORT: z.coerce.number().int().min(1).max(65535).default(6379),
+  VALKEY_PASSWORD: z.string().min(1),
+  VALKEY_URL: z.url(),
   SUPAGEN_API_ENV_FILE: z.string().optional(),
 });
 
