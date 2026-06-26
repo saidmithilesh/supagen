@@ -23,6 +23,7 @@ pnpm install
 pnpm dev
 pnpm build
 pnpm lint
+pnpm test
 pnpm typecheck
 pnpm db:check
 ```
@@ -112,6 +113,28 @@ local source of truth for both infra bootstrap values and API connection URLs.
 Use the `supagen-infra` Compose project with explicit named volumes. Keep local
 services on their default ports unless there is a deliberate reason to change
 them.
+
+### Testing And CI
+
+API tests should use Jest with `@nestjs/testing` so tests can exercise Nest's
+dependency-injection model. Use Supertest for HTTP-level API tests.
+
+Web and shared-package tests should use Vitest. Web component tests should use
+Testing Library with jsdom.
+
+CI is a verification gate, not a deployment pipeline. It should install from the
+lockfile, prepare the local API env file from `apps/api/.env.example`, and run
+formatting, Drizzle checks, typechecking, linting, tests, and builds.
+
+## Testing Workflow
+
+```sh
+pnpm test
+pnpm test:watch
+```
+
+The API uses Jest with Nest testing utilities. The web and shared packages use
+Vitest.
 
 ## Database Workflow
 
