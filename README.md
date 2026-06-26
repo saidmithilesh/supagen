@@ -25,3 +25,15 @@ pnpm build
 pnpm lint
 pnpm typecheck
 ```
+
+## API Environment
+
+API env files live in `apps/api` and are gitignored.
+
+```sh
+cp apps/api/.env.example apps/api/.env.local
+```
+
+By default, the API loads `apps/api/.env.local`. When the Node process starts
+with `NODE_ENV=production`, it loads `apps/api/.env.production` instead. Set
+`SUPAGEN_API_ENV_FILE` to override the file name explicitly.
