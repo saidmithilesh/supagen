@@ -1,16 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { Homepage } from "../components/marketing/Homepage";
+import { SUPAGEN_META_DESCRIPTION, SUPAGEN_META_TITLE } from "./__root";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
   head: () => ({
     meta: [
-      { title: "Supagen | The backend for your AI features & Agents" },
+      { title: SUPAGEN_META_TITLE },
       {
         name: "description",
-        content:
-          "Supagen is the AI backend layer for prompts, model routing, observability, and cost tracking across every AI modality.",
+        content: SUPAGEN_META_DESCRIPTION,
       },
     ],
   }),
