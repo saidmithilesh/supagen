@@ -16,6 +16,7 @@ import { Route as ModelsRouteImport } from "./routes/models";
 import { Route as AuthRouteImport } from "./routes/auth";
 import { Route as AppRouteImport } from "./routes/app";
 import { Route as IndexRouteImport } from "./routes/index";
+import { Route as AuthSplatRouteImport } from "./routes/auth.$";
 
 const TermsRoute = TermsRouteImport.update({
   id: "/terms",
@@ -52,34 +53,42 @@ const IndexRoute = IndexRouteImport.update({
   path: "/",
   getParentRoute: () => rootRouteImport,
 } as any);
+const AuthSplatRoute = AuthSplatRouteImport.update({
+  id: "/$",
+  path: "/$",
+  getParentRoute: () => AuthRoute,
+} as any);
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
   "/app": typeof AppRoute;
-  "/auth": typeof AuthRoute;
+  "/auth": typeof AuthRouteWithChildren;
   "/models": typeof ModelsRoute;
   "/pricing": typeof PricingRoute;
   "/privacy": typeof PrivacyRoute;
   "/terms": typeof TermsRoute;
+  "/auth/$": typeof AuthSplatRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
   "/app": typeof AppRoute;
-  "/auth": typeof AuthRoute;
+  "/auth": typeof AuthRouteWithChildren;
   "/models": typeof ModelsRoute;
   "/pricing": typeof PricingRoute;
   "/privacy": typeof PrivacyRoute;
   "/terms": typeof TermsRoute;
+  "/auth/$": typeof AuthSplatRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   "/": typeof IndexRoute;
   "/app": typeof AppRoute;
-  "/auth": typeof AuthRoute;
+  "/auth": typeof AuthRouteWithChildren;
   "/models": typeof ModelsRoute;
   "/pricing": typeof PricingRoute;
   "/privacy": typeof PrivacyRoute;
   "/terms": typeof TermsRoute;
+  "/auth/$": typeof AuthSplatRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -90,9 +99,18 @@ export interface FileRouteTypes {
     | "/models"
     | "/pricing"
     | "/privacy"
-    | "/terms";
+    | "/terms"
+    | "/auth/$";
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/app" | "/auth" | "/models" | "/pricing" | "/privacy" | "/terms";
+  to:
+    | "/"
+    | "/app"
+    | "/auth"
+    | "/models"
+    | "/pricing"
+    | "/privacy"
+    | "/terms"
+    | "/auth/$";
   id:
     | "__root__"
     | "/"
@@ -101,13 +119,14 @@ export interface FileRouteTypes {
     | "/models"
     | "/pricing"
     | "/privacy"
-    | "/terms";
+    | "/terms"
+    | "/auth/$";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   AppRoute: typeof AppRoute;
-  AuthRoute: typeof AuthRoute;
+  AuthRoute: typeof AuthRouteWithChildren;
   ModelsRoute: typeof ModelsRoute;
   PricingRoute: typeof PricingRoute;
   PrivacyRoute: typeof PrivacyRoute;
@@ -165,13 +184,30 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof IndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/auth/$": {
+      id: "/auth/$";
+      path: "/$";
+      fullPath: "/auth/$";
+      preLoaderRoute: typeof AuthSplatRouteImport;
+      parentRoute: typeof AuthRoute;
+    };
   }
 }
+
+interface AuthRouteChildren {
+  AuthSplatRoute: typeof AuthSplatRoute;
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthSplatRoute: AuthSplatRoute,
+};
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren);
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRoute,
-  AuthRoute: AuthRoute,
+  AuthRoute: AuthRouteWithChildren,
   ModelsRoute: ModelsRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,

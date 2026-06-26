@@ -1,5 +1,5 @@
 import { SignIn, SignUp } from "@clerk/tanstack-react-start";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 
 import {
   Tabs,
@@ -8,7 +8,7 @@ import {
   TabsTrigger,
 } from "@supagen/ui/components/tabs";
 
-type AuthMode = "sign-in" | "sign-up";
+import { resolveAuthMode, type AuthMode } from "../auth/auth-flow";
 
 type AuthSearch = {
   mode: AuthMode;
@@ -97,13 +97,16 @@ export function normalizeAuthSearch(
 function AuthRoute() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
+  const { _splat } = useParams({ strict: false });
+  const mode = resolveAuthMode(search.mode, _splat);
 
   return (
     <AuthPanel
-      mode={search.mode}
+      mode={mode}
       redirectUrl={search.redirect_url}
       onModeChange={(mode) => {
         void navigate({
+          to: "/auth",
           search: {
             mode,
             redirect_url: search.redirect_url,
@@ -134,27 +137,24 @@ export function AuthPanel({
           alt=""
           className="absolute inset-0 size-full object-cover"
         />
-        <div className="absolute inset-0 bg-background/85" />
+        <div className="absolute inset-0 bg-background/75" />
         <div className="relative flex h-svh w-full flex-col justify-between px-10 py-10 2xl:p-14">
           <a href="/" className="flex w-fit items-center gap-3 font-semibold">
             <img src="/logo.svg" alt="" className="size-9" />
             <span>Supagen</span>
           </a>
 
-          <div className="flex max-w-[680px] flex-col gap-5">
-            <h1 className="font-heading text-5xl leading-tight font-semibold tracking-normal">
-              Build AI features without wiring every provider by hand.
+          <div className="flex max-w-[680px] flex-col gap-5 flex-end">
+            <h1 className="font-heading text-4xl leading-tight font-semibold tracking-normal">
+              Build AI features without wiring
+              <br />
+              every provider by hand.
             </h1>
             <p className="max-w-lg text-lg leading-8 text-muted-foreground">
               Supagen gives your product one control plane for prompts, model
               routing, keys, observability, usage, and end-user AI consumption.
             </p>
           </div>
-
-          <p className="max-w-md text-sm leading-6 text-muted-foreground">
-            Ship experiments quickly. Keep the operational details visible as
-            your AI stack grows.
-          </p>
         </div>
       </section>
 

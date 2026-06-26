@@ -2,29 +2,34 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { resolveAuthMode } from "../auth/auth-flow";
 import { AuthPanel, normalizeAuthSearch } from "./auth";
 
 vi.mock("@clerk/tanstack-react-start", () => ({
   SignIn: ({
     fallbackRedirectUrl,
     forceRedirectUrl,
+    signUpUrl,
   }: {
     fallbackRedirectUrl?: string;
     forceRedirectUrl?: string;
+    signUpUrl?: string;
   }) => (
     <div data-testid="clerk-sign-in">
-      {fallbackRedirectUrl}:{forceRedirectUrl}
+      {fallbackRedirectUrl}:{forceRedirectUrl}:{signUpUrl}
     </div>
   ),
   SignUp: ({
     fallbackRedirectUrl,
     forceRedirectUrl,
+    signInUrl,
   }: {
     fallbackRedirectUrl?: string;
     forceRedirectUrl?: string;
+    signInUrl?: string;
   }) => (
     <div data-testid="clerk-sign-up">
-      {fallbackRedirectUrl}:{forceRedirectUrl}
+      {fallbackRedirectUrl}:{forceRedirectUrl}:{signInUrl}
     </div>
   ),
 }));
@@ -47,6 +52,17 @@ describe(normalizeAuthSearch.name, () => {
       mode: "sign-up",
       redirect_url: "/app",
     });
+  });
+});
+
+describe(resolveAuthMode.name, () => {
+  it("keeps SSO callback mode controlled by the search state", () => {
+    expect(resolveAuthMode("sign-in", "sso-callback")).toBe("sign-in");
+    expect(resolveAuthMode("sign-up", "sso-callback")).toBe("sign-up");
+  });
+
+  it("uses the sign-up flow for email verification paths", () => {
+    expect(resolveAuthMode("sign-in", "verify-email-address")).toBe("sign-up");
   });
 });
 
@@ -77,7 +93,9 @@ describe(AuthPanel.name, () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText("The AI Backend")).not.toBeInTheDocument();
-    expect(screen.getByTestId("clerk-sign-in")).toHaveTextContent("/app:/app");
+    expect(screen.getByTestId("clerk-sign-in")).toHaveTextContent(
+      "/app:/app:/auth?mode=sign-up&redirect_url=%2Fapp",
+    );
   });
 
   it("renders the Clerk sign-up component for sign-up mode", () => {
@@ -95,7 +113,9 @@ describe(AuthPanel.name, () => {
     expect(
       screen.getByText("Sign up to start building with Supagen"),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("clerk-sign-up")).toHaveTextContent("/app:/app");
+    expect(screen.getByTestId("clerk-sign-up")).toHaveTextContent(
+      "/app:/app:/auth?mode=sign-in&redirect_url=%2Fapp",
+    );
   });
 
   it("emits mode changes from the tabs", async () => {
