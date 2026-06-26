@@ -16,6 +16,8 @@
     "test:integration": "turbo test:integration",
     "test:watch": "turbo test:watch",
     "typecheck": "turbo typecheck",
+    "prepare": "husky",
+    "precommit": "lint-staged",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "infra:up": "docker compose --env-file apps/api/.env.local -f infra/docker-compose.yml up -d",
@@ -29,6 +31,13 @@
     "db:studio": "pnpm --filter @supagen/api db:studio",
     "db:check": "pnpm --filter @supagen/api db:check"
   },
+  "lint-staged": {
+    "*.{css,json,md,yaml,yml}": "prettier --write",
+    "*.{mjs,cjs,js,ts,tsx}": [
+      "prettier --write",
+      "eslint --fix --max-warnings=0"
+    ]
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.5.0",
@@ -36,6 +45,8 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
+    "husky": "9.1.7",
+    "lint-staged": "16.4.0",
     "prettier": "^3.8.4",
     "turbo": "^2.10.0",
     "typescript": "^6.0.3",

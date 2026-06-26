@@ -145,6 +145,13 @@ pnpm test:watch
 The API uses Jest with Nest testing utilities. The web and shared packages use
 Vitest.
 
+## Commit Checks
+
+Husky runs `pnpm precommit` before commits. The pre-commit hook uses
+lint-staged to format staged files with Prettier and run ESLint fixes on staged
+JS/TS files. Full typechecking, tests, and builds stay in CI and can be run
+locally with the root verification commands.
+
 ## Database Workflow
 
 Drizzle is wired for the API package. The database provider and transaction
