@@ -18,7 +18,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["apps/api/**/*.spec.ts"],
+    files: ["apps/api/**/*.spec.ts", "apps/api/**/*.integration-spec.ts"],
     languageOptions: {
       globals: {
         ...globals.node,

@@ -12,6 +12,14 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
+    "test:unit": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "test:integration": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
     "test:watch": {
       "cache": false,
       "persistent": true

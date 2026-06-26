@@ -2,6 +2,8 @@ name: CI
 
 on:
   pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
@@ -45,8 +47,11 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Test
-        run: pnpm test
+      - name: Unit tests
+        run: pnpm test:unit
+
+      - name: Integration tests
+        run: pnpm test:integration
 
       - name: Build
         run: pnpm build

@@ -24,6 +24,8 @@ pnpm dev
 pnpm build
 pnpm lint
 pnpm test
+pnpm test:unit
+pnpm test:integration
 pnpm typecheck
 pnpm db:check
 ```
@@ -122,14 +124,21 @@ dependency-injection model. Use Supertest for HTTP-level API tests.
 Web and shared-package tests should use Vitest. Web component tests should use
 Testing Library with jsdom.
 
+Use `*.spec.ts` for API and shared unit tests, `*.test.ts`/`*.test.tsx` for web
+unit tests, and `*.integration-spec.ts` or `*.integration-test.ts(x)` for
+integration tests.
+
 CI is a verification gate, not a deployment pipeline. It should install from the
 lockfile, prepare the local API env file from `apps/api/.env.example`, and run
-formatting, Drizzle checks, typechecking, linting, tests, and builds.
+formatting, Drizzle checks, typechecking, linting, unit tests, integration
+tests, and builds.
 
 ## Testing Workflow
 
 ```sh
 pnpm test
+pnpm test:unit
+pnpm test:integration
 pnpm test:watch
 ```
 
