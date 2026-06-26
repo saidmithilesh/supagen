@@ -23,6 +23,8 @@ This workspace was initialized locally with Node.js `v24.17.0`, Corepack `0.35.0
 pnpm install
 pnpm dev
 pnpm build
+pnpm build:web:local
+pnpm build:web:production
 pnpm lint
 pnpm test
 pnpm test:unit
@@ -112,9 +114,22 @@ client modules, should consume config and provide already-configured clients to
 domain/application code.
 
 Web env files live in `apps/web`. Track `apps/web/.env.example`; keep real web
-env files such as `apps/web/.env.local` gitignored. TanStack Start and Clerk use
-`CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. Client-side API calls should use
-`VITE_SUPAGEN_API_URL`.
+env files such as `apps/web/.env.local` and `apps/web/.env.production`
+gitignored. Use `apps/web/.env.local` for local development and the Clerk
+development instance. Use `apps/web/.env.production` for production builds and
+the Clerk production instance. TanStack Start and Clerk use
+`CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. Local browser auth tests may
+also use `CLERK_TESTING_TOKEN` from the Clerk dashboard; keep it in ignored env
+files or the shell, and use it only with Clerk development keys. Client-side API
+calls should use `VITE_SUPAGEN_API_URL`.
+
+Use `pnpm build:web:local` when you need a production-shaped web bundle built
+with local development settings. It runs the web build with Vite mode
+`development`, which loads `apps/web/.env.local`. Use
+`pnpm build:web:production` for production deploy preparation. It runs the web
+build with Vite mode `production`, which loads `apps/web/.env.production`.
+Future web deploy scripts should call `pnpm build:web:production` and deploy the
+built output; they should not upload web env files to the server.
 
 ### Web Application
 
@@ -182,10 +197,29 @@ Use `*.spec.ts` for API and shared unit tests, `*.test.ts`/`*.test.tsx` for web
 unit tests, and `*.integration-spec.ts` or `*.integration-test.ts(x)` for
 integration tests.
 
-CI is a verification gate, not a deployment pipeline. It should install from the
-lockfile, prepare local env files from `apps/api/.env.example` and
-`apps/web/.env.example`, and run formatting, Drizzle checks, typechecking,
-linting, unit tests, and builds. CI does not run integration tests.
+Clerk auth should be tested at two browser E2E layers when Playwright is added.
+Dedicated auth-flow tests should exercise the real Clerk UI locally with
+`@clerk/testing`, `clerkSetup()`, and `setupClerkTestingToken({ page })`.
+Signup tests should use Clerk development keys, `+clerk_test` test email
+addresses, and Clerk's fixed `424242` verification code for email-code
+verification. Do not use production Clerk keys, production users, or production
+testing tokens in automated tests.
+
+Future authenticated app E2E tests should usually bypass the Clerk UI by using
+Clerk's Playwright sign-in helpers or a saved `storageState`, then navigate
+directly to authenticated routes such as `/app`. Keep full auth-flow coverage
+small and focused; test product behavior with an already-authenticated test
+session. Do not automate real Google OAuth initially. Verify that the Google
+auth option renders in automated tests, and use manual testing for the external
+OAuth provider flow.
+
+CI is currently manual-only and not a branch protection gate. The checked-in
+workflow uses `workflow_dispatch` and should not run automatically on push or
+pull request while the project has a single developer. When CI is re-enabled, it
+should install from the lockfile, prepare local env files from
+`apps/api/.env.example` and `apps/web/.env.example`, and run formatting, Drizzle
+checks, typechecking, linting, unit tests, and builds. CI should not run
+integration tests or Clerk browser E2E tests until explicitly requested.
 
 ## Testing Workflow
 
@@ -205,8 +239,9 @@ stack.
 
 Husky runs `pnpm precommit` before commits. The pre-commit hook uses
 lint-staged to format staged files with Prettier and run ESLint fixes on staged
-JS/TS files. Full typechecking, tests, and builds stay in CI and can be run
-locally with the root verification commands.
+JS/TS files. Full typechecking, tests, and builds can be run locally with the
+root verification commands. CI is currently available only as a manually
+triggered workflow.
 
 ## Database Workflow
 

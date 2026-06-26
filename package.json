@@ -10,6 +10,8 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
+    "build:web:local": "pnpm --filter @supagen/web build:local",
+    "build:web:production": "pnpm --filter @supagen/web build:production",
     "lint": "turbo lint",
     "test": "pnpm test:unit && pnpm test:integration",
     "test:unit": "turbo test:unit",

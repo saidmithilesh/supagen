@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "build": "pnpm build:production",
+    "build:local": "tsc --noEmit -p tsconfig.json && vite build --mode development",
+    "build:production": "tsc --noEmit -p tsconfig.json && vite build --mode production",
     "preview": "vite preview --host 0.0.0.0",
     "lint": "eslint .",
     "test": "pnpm test:unit && pnpm test:integration",
