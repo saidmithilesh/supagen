@@ -26,6 +26,7 @@ pnpm lint
 pnpm test
 pnpm test:unit
 pnpm test:integration
+pnpm test:integration:local
 pnpm typecheck
 pnpm db:check
 ```
@@ -96,10 +97,13 @@ startup.
 
 ### Config And Secrets
 
-API env files live in `apps/api`. Track `apps/api/.env.example`; keep
-`apps/api/.env.local` and `apps/api/.env.production` gitignored. The API loads
-`.env.local` by default, `.env.production` when the Node process starts with
-`NODE_ENV=production`, and an explicit file when `SUPAGEN_API_ENV_FILE` is set.
+API env files live in `apps/api`. Track env templates such as
+`apps/api/.env.example` and `apps/api/.env.test.example`; keep real env files
+such as `apps/api/.env.local`, `apps/api/.env.test`, and
+`apps/api/.env.production` gitignored. The API loads `.env.local` by default,
+`.env.test` when `NODE_ENV=test`, `.env.production` when the Node process starts
+with `NODE_ENV=production`, and an explicit file when `SUPAGEN_API_ENV_FILE` is
+set.
 
 Use Nest `ConfigModule` and `ConfigService` instead of reading `process.env`
 throughout the codebase. Infrastructure modules, such as database or provider
@@ -112,9 +116,10 @@ Run local infra with Docker Compose and run the API directly on the host for
 fast iteration. Docker Compose should read `apps/api/.env.local`, making it the
 local source of truth for both infra bootstrap values and API connection URLs.
 
-Use the `supagen-infra` Compose project with explicit named volumes. Keep local
-services on their default ports unless there is a deliberate reason to change
-them.
+Use the `supagen-infra` Compose project with explicit named volumes for normal
+local development. Use the separate `supagen-test-infra` Compose project for
+local integration tests. Test infra must not depend on the persistent
+development volumes.
 
 ### Testing And CI
 
@@ -130,8 +135,8 @@ integration tests.
 
 CI is a verification gate, not a deployment pipeline. It should install from the
 lockfile, prepare the local API env file from `apps/api/.env.example`, and run
-formatting, Drizzle checks, typechecking, linting, unit tests, integration
-tests, and builds.
+formatting, Drizzle checks, typechecking, linting, unit tests, and builds. CI
+does not run integration tests.
 
 ## Testing Workflow
 
@@ -139,11 +144,20 @@ tests, and builds.
 pnpm test
 pnpm test:unit
 pnpm test:integration
+pnpm test:integration:local
 pnpm test:watch
 ```
 
 The API uses Jest with Nest testing utilities. The web and shared packages use
-Vitest.
+Vitest. Local integration tests use `.env.test` and the disposable test infra
+stack.
+
+## Commit Checks
+
+Husky runs `pnpm precommit` before commits. The pre-commit hook uses
+lint-staged to format staged files with Prettier and run ESLint fixes on staged
+JS/TS files. Full typechecking, tests, and builds stay in CI and can be run
+locally with the root verification commands.
 
 ## Database Workflow
 
@@ -186,10 +200,37 @@ Data is persisted in explicit Docker named volumes:
 Use `pnpm infra:reset` only when you intentionally want to stop infra and
 delete those volumes.
 
+## Test Infra
+
+Local integration tests use a separate Docker Compose project:
+
+```sh
+pnpm infra:test:up
+pnpm test:integration
+pnpm infra:test:down
+```
+
+`pnpm test:integration:local` runs those three steps and shuts down test infra
+after the tests finish.
+
+The test stack binds to separate local ports:
+
+- Postgres: `localhost:15432`
+- Valkey: `localhost:16379`
+
+The test stack uses tmpfs-backed data and does not reuse the persistent local
+development volumes.
+
 ## API Environment
 
 API env files live in `apps/api` and are gitignored.
 
+```sh
+cp apps/api/.env.example apps/api/.env.local
+cp apps/api/.env.test.example apps/api/.env.test
+```
+
 By default, the API loads `apps/api/.env.local`. When the Node process starts
-with `NODE_ENV=production`, it loads `apps/api/.env.production` instead. Set
+with `NODE_ENV=test`, it loads `apps/api/.env.test`; with
+`NODE_ENV=production`, it loads `apps/api/.env.production`. Set
 `SUPAGEN_API_ENV_FILE` to override the file name explicitly.

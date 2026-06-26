@@ -16,6 +16,8 @@
     "test:integration": "turbo test:integration",
     "test:watch": "turbo test:watch",
     "typecheck": "turbo typecheck",
+    "prepare": "husky",
+    "precommit": "lint-staged",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "infra:up": "docker compose --env-file apps/api/.env.local -f infra/docker-compose.yml up -d",
@@ -23,11 +25,23 @@
     "infra:logs": "docker compose --env-file apps/api/.env.local -f infra/docker-compose.yml logs -f",
     "infra:ps": "docker compose --env-file apps/api/.env.local -f infra/docker-compose.yml ps",
     "infra:reset": "docker compose --env-file apps/api/.env.local -f infra/docker-compose.yml down -v",
+    "infra:test:up": "docker compose --env-file apps/api/.env.test -f infra/docker-compose.test.yml up -d --wait",
+    "infra:test:down": "docker compose --env-file apps/api/.env.test -f infra/docker-compose.test.yml down",
+    "infra:test:logs": "docker compose --env-file apps/api/.env.test -f infra/docker-compose.test.yml logs -f",
+    "infra:test:ps": "docker compose --env-file apps/api/.env.test -f infra/docker-compose.test.yml ps",
+    "test:integration:local": "pnpm infra:test:up && pnpm test:integration; exit_code=$?; pnpm infra:test:down; exit $exit_code",
     "db:generate": "pnpm --filter @supagen/api db:generate",
     "db:migrate": "pnpm --filter @supagen/api db:migrate",
     "db:push": "pnpm --filter @supagen/api db:push",
     "db:studio": "pnpm --filter @supagen/api db:studio",
     "db:check": "pnpm --filter @supagen/api db:check"
+  },
+  "lint-staged": {
+    "*.{css,json,md,yaml,yml}": "prettier --write",
+    "*.{mjs,cjs,js,ts,tsx}": [
+      "prettier --write",
+      "eslint --fix --max-warnings=0"
+    ]
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -36,6 +50,8 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
+    "husky": "9.1.7",
+    "lint-staged": "16.4.0",
     "prettier": "^3.8.4",
     "turbo": "^2.10.0",
     "typescript": "^6.0.3",
