@@ -2,11 +2,83 @@
 
 Supagen is a multi-modal AI gateway for early-stage product teams and solo founders. It gives products one integration surface for text, image, audio, and video generation while centralizing templates, provider routing, keys, governance, observability, usage attribution, assets, and billing controls.
 
-When a higher level overview of the product's long-term goals is needed, refer `docs/product/capability-universe.md`
+## References:
 
-## Project conventions
+- `docs/product/capability-universe.md` contains the superset of all product capabilities supagen will support in its end form.
 
-For architecture, workflow, local infra, configuration, transactions, and
-Drizzle migration conventions, follow `README.md`. Treat the README conventions
-as the default guidance for all future coding agent sessions unless a newer user
-instruction explicitly overrides them.
+## Project Structure:
+
+- Structured as a Typescript monorepo managed with pnpm and Turborepo. Contains the following high level modules.
+  - `apps/api`: NestJS backend
+  - `apps/web`: TanStack Start frontend
+  - `packages/shared`: shared TypeScript types and utilities
+  - `packages/ui`: shared shadcn/Tailwind UI primitives and design tokens
+
+- All commands live as pnpm scripts inside the respective package.json files.
+
+## Backend Development Conventions:
+
+- Organize backend code by domain under `apps/api/src/domains`. Each domain owns its public module boundary and may contain sub-domains.
+
+- Always discuss module and domain boundaries and dependencies with me before deciding on where to place the code.
+
+- Use this layered shape inside a domain, in general, but do not make every folder a Nest module by default:
+
+```txt
+domains/<domain>/
+  <domain>.module.ts
+  presentation/      # controllers and transport-specific DTOs
+  application/       # use cases, orchestration, transaction boundaries
+  domain/            # business rules, domain types, pure domain services
+  infrastructure/    # repositories, Drizzle access, external clients
+```
+
+- Controllers should stay thin. Application services own use cases and coordinate domain services, repositories, permissions and transactions. Repositories own data access only, they don't manage transaction lifecycles.
+
+- Cross-service database transactions should use the `UnitOfWork` provider from `apps/api/src/infrastructure/database`. The top-level application use case starts the Drizzle transaction and passes the transaction context or DB executor to all participating services and repositories.
+
+- Drizzle schema files should live with the domain that owns the tables, for example `apps/api/src/domains/**/**/*.schema.ts`. Generated migrations all live under a single `apps/api/drizzle` directory. Drizzle kit is configured to handle this.
+
+- In local devlopment workflows always generate migrations with `pnpm db:generate` and then run them with `pnpm db:migrate` so that generated migration sql is always checked into source code. Never force push migrations to database.
+
+## Frontend Development Conventions
+
+- The web app uses Tanstack Start wit Vite. Public SEO oriented pages should be pre-renderable static routes. Authenticated application surface lives under `/app/*`
+
+- Auth is Clerk only. Do not build custom credential handling. For any given use case, extension or modification in the authn and authz flows, always check if a Clerk provided solution exists before rolling out your own.
+
+- For routing use Tanstack Router best practices. For server state use Tanstack Query. Use Zustand only when a specific local state need arises.
+
+- Shared UI primitives live in `packages/ui` as `@supagen/ui`. Use shadcn
+  components before creating custom UI primitives; install new shadcn components
+  with the CLI when needed.
+
+## Config and Secrets Management
+
+- api and web directories both have their respective .env.example files and gitignored .env.local and .env.production files for storing config and secrets.
+
+- Use Nest `ConfigModule` and `ConfigService` instead of reading `process.env` throughout the codebase.
+
+- When adding new config variables or secrets, always update the respective .env.example template.
+
+## Development Infra Management
+
+- Run local infra with Docker Compose and run the API server and any other application services directly on the local machine to benefit from fast startups.
+
+- Docker compose should read configs and secrets from `apps/api/.env.local` making it the single source of truth.
+
+- When adding new services to infra, always add them under the `supagen-infra` Compose project with explicit named volumes for normal local development.
+
+- `supagen-test-infra` is the testing counterpart for the development infra compose project. Use this for local integration tests. It must not depend on the persistent development volumes.
+
+## Testing
+
+- API tests should use Jest with `@nestjs/testing` so tests can exercise Nest's
+  dependency-injection model. Use Supertest for HTTP-level API tests.
+
+- Web and shared-package tests should use Vitest. Web component tests should use
+  Testing Library with jsdom.
+
+- Use `*.spec.ts` for API and shared unit tests, `*.test.ts`/`*.test.tsx` for web
+  unit tests, and `*.integration-spec.ts` or `*.integration-test.ts(x)` for
+  integration tests.
