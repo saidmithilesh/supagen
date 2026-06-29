@@ -26,13 +26,23 @@ describe("App health endpoint", () => {
   });
 
   it("returns the API health response", async () => {
-    await request(app.getHttpServer())
+    const response = await request(app.getHttpServer())
       .get("/api/v1/health")
       .expect(200)
       .expect({
         status: "ok",
         service: "supagen-api",
       });
+
+    expect(response.headers["x-request-id"]).toEqual(expect.any(String));
+  });
+
+  it("preserves a valid incoming request ID", async () => {
+    await request(app.getHttpServer())
+      .get("/api/v1/health")
+      .set("x-request-id", "test-request-id")
+      .expect(200)
+      .expect("x-request-id", "test-request-id");
   });
 
   it("loads the test environment", () => {

@@ -47,8 +47,79 @@ services:
     volumes:
       - supagen-valkey-data:/data
 
+  loki:
+    image: grafana/loki:latest
+    container_name: supagen-loki
+    profiles: ["telemetry"]
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./runtime-telemetry/loki.yaml:/etc/loki/local-config.yaml:ro
+      - supagen-loki-data:/loki
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: supagen-tempo
+    profiles: ["telemetry"]
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    ports:
+      - "3200:3200"
+      - "14318:4318"
+    volumes:
+      - ./runtime-telemetry/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - supagen-tempo-data:/var/tempo
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: supagen-alloy
+    profiles: ["telemetry"]
+    restart: unless-stopped
+    command:
+      [
+        "run",
+        "--server.http.listen-addr=0.0.0.0:12345",
+        "--storage.path=/var/lib/alloy/data",
+        "/etc/alloy/config.river",
+      ]
+    ports:
+      - "12345:12345"
+      - "4318:4318"
+    depends_on:
+      - loki
+      - tempo
+    volumes:
+      - ./runtime-telemetry/alloy.river:/etc/alloy/config.river:ro
+      - ../.runtime/logs:/var/supagen/runtime-logs:ro
+      - supagen-alloy-data:/var/lib/alloy/data
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: supagen-grafana
+    profiles: ["telemetry"]
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+    volumes:
+      - ./runtime-telemetry/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - supagen-grafana-data:/var/lib/grafana
+
 volumes:
   supagen-postgres-data:
     name: supagen-postgres-data
   supagen-valkey-data:
     name: supagen-valkey-data
+  supagen-loki-data:
+    name: supagen-loki-data
+  supagen-tempo-data:
+    name: supagen-tempo-data
+  supagen-alloy-data:
+    name: supagen-alloy-data
+  supagen-grafana-data:
+    name: supagen-grafana-data

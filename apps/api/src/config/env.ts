@@ -8,6 +8,31 @@ const optionalNonEmptyString = z.preprocess(
   z.string().min(1).optional(),
 );
 
+const optionalBoolean = z.preprocess((value) => {
+  if (value === "" || value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+
+    if (["1", "true", "yes", "on"].includes(normalized)) {
+      return true;
+    }
+
+    if (["0", "false", "no", "off"].includes(normalized)) {
+      return false;
+    }
+  }
+
+  return value;
+}, z.boolean().optional());
+
+const optionalUrl = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.url().optional(),
+);
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -27,6 +52,25 @@ const envSchema = z.object({
   CLERK_JWT_KEY: optionalNonEmptyString,
   CLERK_AUTHORIZED_PARTIES: optionalNonEmptyString,
   CORS_ALLOWED_ORIGINS: optionalNonEmptyString,
+  RUNTIME_TELEMETRY_ENABLED: optionalBoolean,
+  RUNTIME_TELEMETRY_LOG_LEVEL: z
+    .enum(["trace", "debug", "info", "warn", "error", "fatal", "silent"])
+    .optional(),
+  RUNTIME_TELEMETRY_LOG_FORMAT: z.enum(["pretty", "json"]).optional(),
+  RUNTIME_TELEMETRY_LOG_FILE: optionalNonEmptyString,
+  OTEL_SERVICE_NAME: optionalNonEmptyString,
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: optionalUrl,
+  OTEL_TRACES_SAMPLER: z
+    .enum([
+      "always_on",
+      "always_off",
+      "traceidratio",
+      "parentbased_always_on",
+      "parentbased_always_off",
+      "parentbased_traceidratio",
+    ])
+    .optional(),
+  OTEL_TRACES_SAMPLER_ARG: optionalNonEmptyString,
   SUPAGEN_API_ENV_FILE: z.string().optional(),
 });
 

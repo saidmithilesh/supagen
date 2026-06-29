@@ -6,6 +6,7 @@ import { AppService } from "./app.service";
 import { getEnvFilePath, validateEnv } from "./config/env";
 import { IamModule } from "./domains/iam/iam.module";
 import { DatabaseModule } from "./infrastructure/database";
+import { RuntimeTelemetryModule } from "./infrastructure/runtime-telemetry";
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { DatabaseModule } from "./infrastructure/database";
       isGlobal: true,
       validate: validateEnv,
     }),
+    RuntimeTelemetryModule,
     DatabaseModule,
     IamModule,
   ],

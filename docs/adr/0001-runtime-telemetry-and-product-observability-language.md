@@ -1,0 +1,3 @@
+# Runtime telemetry and product observability language
+
+Supagen reserves "observability" for the customer-facing product area that helps workspaces inspect and debug invocations. Supagen's own service logs, traces, and metrics are called "runtime telemetry" and should live in infrastructure-level code such as `runtime-telemetry`, leaving `domains/observability` available for the future product domain. This is a deliberate departure from common industry phrasing, where "observability" often refers to internal service telemetry, because Supagen also exposes observability as a product capability and the overloaded term would create avoidable ambiguity.

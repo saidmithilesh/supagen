@@ -65,3 +65,32 @@ Stop local infra when finished:
 ```sh
 pnpm infra:down
 ```
+
+## Local Runtime Telemetry
+
+Runtime telemetry is optional for local development. Start the local Loki,
+Tempo, Alloy, and Grafana stack with:
+
+```sh
+pnpm infra:telemetry:up
+```
+
+The API still runs on the host. It writes JSON runtime logs to
+`.runtime/logs/api.jsonl`, and Dockerized Alloy tails that file through a bind
+mount. The API exports OTLP traces to `http://localhost:4318/v1/traces`, which
+is also handled by Dockerized Alloy.
+
+Check local telemetry health and query data through the machine-readable
+scripts:
+
+```sh
+pnpm telemetry:health
+pnpm telemetry:logs -- --request-id <request-id>
+pnpm telemetry:trace -- --trace-id <trace-id>
+```
+
+Stop the telemetry stack when finished:
+
+```sh
+pnpm infra:telemetry:down
+```

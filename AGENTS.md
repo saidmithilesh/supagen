@@ -22,6 +22,10 @@ Supagen is a multi-modal AI gateway for early-stage product teams and solo found
 
 - Always discuss module and domain boundaries and dependencies with me before deciding on where to place the code.
 
+- When adding or changing runtime telemetry, always discuss what should be tracked with me before implementing instrumentation.
+
+- Runtime telemetry is internal service telemetry, not customer-facing observability. See `docs/agents/runtime-telemetry.md` for instrumentation conventions and machine-readable debugging workflows.
+
 - Use this layered shape inside a domain, in general, but do not make every folder a Nest module by default:
 
 ```txt

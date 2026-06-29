@@ -1,0 +1,63 @@
+logging {
+	level  = "info"
+	format = "logfmt"
+}
+
+local.file_match "api_logs" {
+	path_targets = [{
+		__path__ = "/var/supagen/runtime-logs/api.jsonl",
+		service  = "supagen-api",
+		env      = "development",
+	}]
+}
+
+loki.source.file "api_logs" {
+	targets    = local.file_match.api_logs.targets
+	forward_to = [loki.process.api_logs.receiver]
+}
+
+loki.process "api_logs" {
+	stage.json {
+		expressions = {
+			level = "level",
+		}
+	}
+
+	stage.labels {
+		values = {
+			level = "level",
+		}
+	}
+
+	stage.label_drop {
+		values = ["filename"]
+	}
+
+	forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+	endpoint {
+		url = "http://loki:3100/loki/api/v1/push"
+	}
+}
+
+otelcol.receiver.otlp "api" {
+	http {
+		endpoint = "0.0.0.0:4318"
+	}
+
+	grpc {
+		endpoint = "0.0.0.0:4317"
+	}
+
+	output {
+		traces = [otelcol.exporter.otlphttp.tempo.input]
+	}
+}
+
+otelcol.exporter.otlphttp "tempo" {
+	client {
+		endpoint = "http://tempo:4318"
+	}
+}

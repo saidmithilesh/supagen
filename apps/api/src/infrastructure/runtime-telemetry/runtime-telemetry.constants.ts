@@ -1,0 +1,4 @@
+export const RUNTIME_LOGGER = Symbol("RUNTIME_LOGGER");
+export const RUNTIME_TRACER = Symbol("RUNTIME_TRACER");
+export const RUNTIME_TELEMETRY_OPTIONS = Symbol("RUNTIME_TELEMETRY_OPTIONS");
+export const PINO_LOGGER = Symbol("PINO_LOGGER");

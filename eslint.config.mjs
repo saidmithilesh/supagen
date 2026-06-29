@@ -33,6 +33,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ["scripts/**/*.{js,cjs,mjs}"],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
     files: ["apps/web/**/*.{ts,tsx}", "packages/ui/**/*.{ts,tsx}"],
     languageOptions: {
       globals: globals.browser,
