@@ -82,3 +82,17 @@ domains/<domain>/
 - Use `*.spec.ts` for API and shared unit tests, `*.test.ts`/`*.test.tsx` for web
   unit tests, and `*.integration-spec.ts` or `*.integration-test.ts(x)` for
   integration tests.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues via the `gh` CLI; external pull requests are not a triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The canonical triage label names are used directly: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This repo uses a single-context domain documentation layout. See `docs/agents/domain.md`.
