@@ -13,7 +13,6 @@ import { Route as TermsRouteImport } from "./routes/terms";
 import { Route as PrivacyRouteImport } from "./routes/privacy";
 import { Route as PricingRouteImport } from "./routes/pricing";
 import { Route as ModelsRouteImport } from "./routes/models";
-import { Route as AuthRouteImport } from "./routes/auth";
 import { Route as AppRouteImport } from "./routes/app";
 import { Route as IndexRouteImport } from "./routes/index";
 import { Route as AuthSplatRouteImport } from "./routes/auth.$";
@@ -38,11 +37,6 @@ const ModelsRoute = ModelsRouteImport.update({
   path: "/models",
   getParentRoute: () => rootRouteImport,
 } as any);
-const AuthRoute = AuthRouteImport.update({
-  id: "/auth",
-  path: "/auth",
-  getParentRoute: () => rootRouteImport,
-} as any);
 const AppRoute = AppRouteImport.update({
   id: "/app",
   path: "/app",
@@ -54,15 +48,14 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any);
 const AuthSplatRoute = AuthSplatRouteImport.update({
-  id: "/$",
-  path: "/$",
-  getParentRoute: () => AuthRoute,
+  id: "/auth/$",
+  path: "/auth/$",
+  getParentRoute: () => rootRouteImport,
 } as any);
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
   "/app": typeof AppRoute;
-  "/auth": typeof AuthRouteWithChildren;
   "/models": typeof ModelsRoute;
   "/pricing": typeof PricingRoute;
   "/privacy": typeof PrivacyRoute;
@@ -72,7 +65,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
   "/app": typeof AppRoute;
-  "/auth": typeof AuthRouteWithChildren;
   "/models": typeof ModelsRoute;
   "/pricing": typeof PricingRoute;
   "/privacy": typeof PrivacyRoute;
@@ -83,7 +75,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   "/": typeof IndexRoute;
   "/app": typeof AppRoute;
-  "/auth": typeof AuthRouteWithChildren;
   "/models": typeof ModelsRoute;
   "/pricing": typeof PricingRoute;
   "/privacy": typeof PrivacyRoute;
@@ -95,27 +86,17 @@ export interface FileRouteTypes {
   fullPaths:
     | "/"
     | "/app"
-    | "/auth"
     | "/models"
     | "/pricing"
     | "/privacy"
     | "/terms"
     | "/auth/$";
   fileRoutesByTo: FileRoutesByTo;
-  to:
-    | "/"
-    | "/app"
-    | "/auth"
-    | "/models"
-    | "/pricing"
-    | "/privacy"
-    | "/terms"
-    | "/auth/$";
+  to: "/" | "/app" | "/models" | "/pricing" | "/privacy" | "/terms" | "/auth/$";
   id:
     | "__root__"
     | "/"
     | "/app"
-    | "/auth"
     | "/models"
     | "/pricing"
     | "/privacy"
@@ -126,11 +107,11 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   AppRoute: typeof AppRoute;
-  AuthRoute: typeof AuthRouteWithChildren;
   ModelsRoute: typeof ModelsRoute;
   PricingRoute: typeof PricingRoute;
   PrivacyRoute: typeof PrivacyRoute;
   TermsRoute: typeof TermsRoute;
+  AuthSplatRoute: typeof AuthSplatRoute;
 }
 
 declare module "@tanstack/react-router" {
@@ -163,13 +144,6 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ModelsRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    "/auth": {
-      id: "/auth";
-      path: "/auth";
-      fullPath: "/auth";
-      preLoaderRoute: typeof AuthRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
     "/app": {
       id: "/app";
       path: "/app";
@@ -186,32 +160,22 @@ declare module "@tanstack/react-router" {
     };
     "/auth/$": {
       id: "/auth/$";
-      path: "/$";
+      path: "/auth/$";
       fullPath: "/auth/$";
       preLoaderRoute: typeof AuthSplatRouteImport;
-      parentRoute: typeof AuthRoute;
+      parentRoute: typeof rootRouteImport;
     };
   }
 }
 
-interface AuthRouteChildren {
-  AuthSplatRoute: typeof AuthSplatRoute;
-}
-
-const AuthRouteChildren: AuthRouteChildren = {
-  AuthSplatRoute: AuthSplatRoute,
-};
-
-const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren);
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRoute,
-  AuthRoute: AuthRouteWithChildren,
   ModelsRoute: ModelsRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
+  AuthSplatRoute: AuthSplatRoute,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

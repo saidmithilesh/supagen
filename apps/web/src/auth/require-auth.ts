@@ -7,7 +7,10 @@ export const requireAuth = createServerFn().handler(async () => {
 
   if (!isAuthenticated) {
     throw redirect({
-      to: "/auth",
+      to: "/auth/$",
+      params: {
+        _splat: "",
+      },
       search: {
         mode: "sign-in",
         redirect_url: "/app",

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { resolveAuthMode } from "../auth/auth-flow";
-import { AuthPanel, normalizeAuthSearch } from "./auth";
+import { AuthPanel, normalizeAuthSearch } from "./auth.$";
 
 vi.mock("@clerk/tanstack-react-start", () => ({
   SignIn: ({
