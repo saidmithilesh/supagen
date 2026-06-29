@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import request from "supertest";
 
 import { AppModule } from "./app.module";
+import { configureApp } from "./configure-app";
 
 describe("App health endpoint", () => {
   let app: INestApplication;
@@ -15,6 +16,7 @@ describe("App health endpoint", () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
+    configureApp(app);
     config = moduleRef.get(ConfigService);
     await app.init();
   });
@@ -24,10 +26,13 @@ describe("App health endpoint", () => {
   });
 
   it("returns the API health response", async () => {
-    await request(app.getHttpServer()).get("/health").expect(200).expect({
-      status: "ok",
-      service: "supagen-api",
-    });
+    await request(app.getHttpServer())
+      .get("/api/v1/health")
+      .expect(200)
+      .expect({
+        status: "ok",
+        service: "supagen-api",
+      });
   });
 
   it("loads the test environment", () => {

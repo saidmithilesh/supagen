@@ -146,8 +146,7 @@ export function AuthPanel({
 
           <div className="flex max-w-[680px] flex-col gap-5">
             <h1 className="font-heading text-4xl leading-tight font-semibold tracking-normal">
-              Build AI features without wiring
-              <br />
+              Build AI features without wiring <br />
               every provider by hand.
             </h1>
             <p className="max-w-lg text-lg leading-8 text-muted-foreground">

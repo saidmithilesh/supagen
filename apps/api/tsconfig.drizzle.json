@@ -8,5 +8,10 @@
     "allowSyntheticDefaultImports": true,
     "noEmit": true
   },
-  "include": ["drizzle.config.ts", "src/config/env.ts"]
+  "include": [
+    "drizzle.config.ts",
+    "src/config/env.ts",
+    "src/domains/**/*.schema.ts",
+    "src/infrastructure/database/schema-helpers.ts"
+  ]
 }

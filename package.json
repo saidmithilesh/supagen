@@ -31,7 +31,7 @@
     "infra:test:down": "docker compose --env-file apps/api/.env.test -f infra/docker-compose.test.yml down",
     "infra:test:logs": "docker compose --env-file apps/api/.env.test -f infra/docker-compose.test.yml logs -f",
     "infra:test:ps": "docker compose --env-file apps/api/.env.test -f infra/docker-compose.test.yml ps",
-    "test:integration:local": "pnpm infra:test:up && pnpm test:integration; exit_code=$?; pnpm infra:test:down; exit $exit_code",
+    "test:integration:local": "pnpm infra:test:up && SUPAGEN_API_ENV_FILE=.env.test pnpm db:migrate && pnpm test:integration; exit_code=$?; pnpm infra:test:down; exit $exit_code",
     "db:generate": "pnpm --filter @supagen/api db:generate",
     "db:migrate": "pnpm --filter @supagen/api db:migrate",
     "db:push": "pnpm --filter @supagen/api db:push",

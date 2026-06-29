@@ -3,9 +3,27 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+const apiProxyTarget =
+  process.env.SUPAGEN_API_PROXY_TARGET ?? "http://localhost:3000";
+
+function createApiProxy() {
+  return {
+    "/api/v1": {
+      changeOrigin: true,
+      target: apiProxyTarget,
+    },
+  };
+}
+
 export default defineConfig({
   resolve: {
     tsconfigPaths: true,
+  },
+  server: {
+    proxy: createApiProxy(),
+  },
+  preview: {
+    proxy: createApiProxy(),
   },
   plugins: [
     tailwindcss(),

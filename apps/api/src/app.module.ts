@@ -4,6 +4,7 @@ import { ConfigModule } from "@nestjs/config";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { getEnvFilePath, validateEnv } from "./config/env";
+import { IamModule } from "./domains/iam/iam.module";
 import { DatabaseModule } from "./infrastructure/database";
 
 @Module({
@@ -16,6 +17,7 @@ import { DatabaseModule } from "./infrastructure/database";
       validate: validateEnv,
     }),
     DatabaseModule,
+    IamModule,
   ],
   controllers: [AppController],
   providers: [AppService],

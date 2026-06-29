@@ -3,6 +3,11 @@ import { dirname, join } from "node:path";
 
 import { z } from "zod";
 
+const optionalNonEmptyString = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().min(1).optional(),
+);
+
 const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -18,6 +23,10 @@ const envSchema = z.object({
   VALKEY_PORT: z.coerce.number().int().min(1).max(65535).default(6379),
   VALKEY_PASSWORD: z.string().min(1),
   VALKEY_URL: z.url(),
+  CLERK_SECRET_KEY: optionalNonEmptyString,
+  CLERK_JWT_KEY: optionalNonEmptyString,
+  CLERK_AUTHORIZED_PARTIES: optionalNonEmptyString,
+  CORS_ALLOWED_ORIGINS: optionalNonEmptyString,
   SUPAGEN_API_ENV_FILE: z.string().optional(),
 });
 
