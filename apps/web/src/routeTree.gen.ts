@@ -16,6 +16,8 @@ import { Route as ModelsRouteImport } from "./routes/models";
 import { Route as AppRouteImport } from "./routes/app";
 import { Route as IndexRouteImport } from "./routes/index";
 import { Route as AuthSplatRouteImport } from "./routes/auth.$";
+import { Route as AppWorkspacesWorkspaceIdRouteImport } from "./routes/app_.workspaces.$workspaceId";
+import { Route as AppWorkspacesWorkspaceIdOverviewRouteImport } from "./routes/app_.workspaces.$workspaceId_.overview";
 
 const TermsRoute = TermsRouteImport.update({
   id: "/terms",
@@ -52,6 +54,18 @@ const AuthSplatRoute = AuthSplatRouteImport.update({
   path: "/auth/$",
   getParentRoute: () => rootRouteImport,
 } as any);
+const AppWorkspacesWorkspaceIdRoute =
+  AppWorkspacesWorkspaceIdRouteImport.update({
+    id: "/app_/workspaces/$workspaceId",
+    path: "/app/workspaces/$workspaceId",
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const AppWorkspacesWorkspaceIdOverviewRoute =
+  AppWorkspacesWorkspaceIdOverviewRouteImport.update({
+    id: "/app_/workspaces/$workspaceId_/overview",
+    path: "/app/workspaces/$workspaceId/overview",
+    getParentRoute: () => rootRouteImport,
+  } as any);
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
@@ -61,6 +75,8 @@ export interface FileRoutesByFullPath {
   "/privacy": typeof PrivacyRoute;
   "/terms": typeof TermsRoute;
   "/auth/$": typeof AuthSplatRoute;
+  "/app/workspaces/$workspaceId": typeof AppWorkspacesWorkspaceIdRoute;
+  "/app/workspaces/$workspaceId/overview": typeof AppWorkspacesWorkspaceIdOverviewRoute;
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
@@ -70,6 +86,8 @@ export interface FileRoutesByTo {
   "/privacy": typeof PrivacyRoute;
   "/terms": typeof TermsRoute;
   "/auth/$": typeof AuthSplatRoute;
+  "/app/workspaces/$workspaceId": typeof AppWorkspacesWorkspaceIdRoute;
+  "/app/workspaces/$workspaceId/overview": typeof AppWorkspacesWorkspaceIdOverviewRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -80,6 +98,8 @@ export interface FileRoutesById {
   "/privacy": typeof PrivacyRoute;
   "/terms": typeof TermsRoute;
   "/auth/$": typeof AuthSplatRoute;
+  "/app_/workspaces/$workspaceId": typeof AppWorkspacesWorkspaceIdRoute;
+  "/app_/workspaces/$workspaceId_/overview": typeof AppWorkspacesWorkspaceIdOverviewRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -90,9 +110,20 @@ export interface FileRouteTypes {
     | "/pricing"
     | "/privacy"
     | "/terms"
-    | "/auth/$";
+    | "/auth/$"
+    | "/app/workspaces/$workspaceId"
+    | "/app/workspaces/$workspaceId/overview";
   fileRoutesByTo: FileRoutesByTo;
-  to: "/" | "/app" | "/models" | "/pricing" | "/privacy" | "/terms" | "/auth/$";
+  to:
+    | "/"
+    | "/app"
+    | "/models"
+    | "/pricing"
+    | "/privacy"
+    | "/terms"
+    | "/auth/$"
+    | "/app/workspaces/$workspaceId"
+    | "/app/workspaces/$workspaceId/overview";
   id:
     | "__root__"
     | "/"
@@ -101,7 +132,9 @@ export interface FileRouteTypes {
     | "/pricing"
     | "/privacy"
     | "/terms"
-    | "/auth/$";
+    | "/auth/$"
+    | "/app_/workspaces/$workspaceId"
+    | "/app_/workspaces/$workspaceId_/overview";
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -112,6 +145,8 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute;
   TermsRoute: typeof TermsRoute;
   AuthSplatRoute: typeof AuthSplatRoute;
+  AppWorkspacesWorkspaceIdRoute: typeof AppWorkspacesWorkspaceIdRoute;
+  AppWorkspacesWorkspaceIdOverviewRoute: typeof AppWorkspacesWorkspaceIdOverviewRoute;
 }
 
 declare module "@tanstack/react-router" {
@@ -165,6 +200,20 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthSplatRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/app_/workspaces/$workspaceId": {
+      id: "/app_/workspaces/$workspaceId";
+      path: "/app/workspaces/$workspaceId";
+      fullPath: "/app/workspaces/$workspaceId";
+      preLoaderRoute: typeof AppWorkspacesWorkspaceIdRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/app_/workspaces/$workspaceId_/overview": {
+      id: "/app_/workspaces/$workspaceId_/overview";
+      path: "/app/workspaces/$workspaceId/overview";
+      fullPath: "/app/workspaces/$workspaceId/overview";
+      preLoaderRoute: typeof AppWorkspacesWorkspaceIdOverviewRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
   }
 }
 
@@ -176,6 +225,8 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   AuthSplatRoute: AuthSplatRoute,
+  AppWorkspacesWorkspaceIdRoute: AppWorkspacesWorkspaceIdRoute,
+  AppWorkspacesWorkspaceIdOverviewRoute: AppWorkspacesWorkspaceIdOverviewRoute,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

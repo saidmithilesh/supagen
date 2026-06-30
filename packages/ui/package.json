@@ -22,10 +22,10 @@
   "dependencies": {
     "@clerk/ui": "^1.22.0",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "@fontsource-variable/material-symbols-outlined": "^5.2.45",
     "@fontsource/be-vietnam-pro": "^5.2.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.21.0",
     "radix-ui": "^1.6.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

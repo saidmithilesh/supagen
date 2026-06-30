@@ -1,12 +1,6 @@
 import { UserButton, useAuth, useUser } from "@clerk/tanstack-react-start";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  FingerprintIcon,
-  LoaderCircleIcon,
-  MailIcon,
-  UserIcon,
-} from "lucide-react";
 import type { ReactNode } from "react";
 
 import {
@@ -30,6 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@supagen/ui/components/card";
+import { MaterialIcon } from "@supagen/ui/components/material-icon";
 
 export const Route = createFileRoute("/app")({
   beforeLoad: async () => await requireAuth(),
@@ -73,9 +68,10 @@ export function AppWorkspacePage() {
   if (!isLoaded || profileQuery.isLoading) {
     return (
       <main className="flex min-h-svh items-center justify-center bg-background text-foreground">
-        <LoaderCircleIcon
+        <MaterialIcon
           className="animate-spin"
           aria-label="Loading profile"
+          name="progress_activity"
         />
       </main>
     );
@@ -112,9 +108,10 @@ export function AppWorkspacePage() {
   if (!profileQuery.data) {
     return (
       <main className="flex min-h-svh items-center justify-center bg-background text-foreground">
-        <LoaderCircleIcon
+        <MaterialIcon
           className="animate-spin"
           aria-label="Loading profile"
+          name="progress_activity"
         />
       </main>
     );
@@ -173,17 +170,17 @@ export function AppWorkspacePage() {
           <CardContent>
             <dl className="grid gap-4 md:grid-cols-3">
               <ProfileField
-                icon={<UserIcon />}
+                icon={<MaterialIcon name="person" />}
                 label="Name"
                 value={displayName}
               />
               <ProfileField
-                icon={<MailIcon />}
+                icon={<MaterialIcon name="mail" />}
                 label="Email"
                 value={primaryEmail}
               />
               <ProfileField
-                icon={<FingerprintIcon />}
+                icon={<MaterialIcon name="fingerprint" />}
                 label="User ID"
                 value={profile.user.id}
               />
@@ -201,17 +198,17 @@ export function AppWorkspacePage() {
           <CardContent>
             <dl className="grid gap-4 md:grid-cols-3">
               <ProfileField
-                icon={<UserIcon />}
+                icon={<MaterialIcon name="person" />}
                 label="Role"
                 value={primaryMembership?.role ?? "Unavailable"}
               />
               <ProfileField
-                icon={<FingerprintIcon />}
+                icon={<MaterialIcon name="fingerprint" />}
                 label="Organization"
                 value={primaryMembership?.organization.name ?? "Unavailable"}
               />
               <ProfileField
-                icon={<FingerprintIcon />}
+                icon={<MaterialIcon name="fingerprint" />}
                 label="Workspace"
                 value={primaryWorkspace?.name ?? "Unavailable"}
               />

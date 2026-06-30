@@ -125,12 +125,6 @@
   text-decoration: none;
 }
 
-.homepage-root .marketing-icon {
-  width: 1em;
-  height: 1em;
-  flex-shrink: 0;
-}
-
 /* === NAV === */
 .homepage-root .nav {
   position: fixed;
@@ -489,7 +483,7 @@
   color: var(--color-primary);
   font-weight: 700;
 }
-.homepage-root .mock-nav-item .marketing-icon {
+.homepage-root .mock-nav-item .material-symbols-outlined {
   font-size: 18px;
 }
 .homepage-root .mock-content {
@@ -671,7 +665,7 @@
   justify-content: center;
   box-shadow: var(--shadow-soft);
 }
-.homepage-root .arch-app-icon .marketing-icon {
+.homepage-root .arch-app-icon .material-symbols-outlined {
   font-size: 40px;
   color: var(--color-foreground);
 }
@@ -821,7 +815,7 @@
   color: var(--color-foreground);
   white-space: nowrap;
 }
-.homepage-root .arch-capability .marketing-icon {
+.homepage-root .arch-capability .material-symbols-outlined {
   font-size: 18px;
   color: var(--color-primary);
   flex-shrink: 0;
@@ -879,7 +873,7 @@
   justify-content: center;
   flex-shrink: 0;
 }
-.homepage-root .arch-modality-icon .marketing-icon {
+.homepage-root .arch-modality-icon .material-symbols-outlined {
   font-size: 20px;
 }
 .homepage-root .arch-modality-card[data-accent="blue"] {
@@ -891,7 +885,7 @@
 .homepage-root
   .arch-modality-card[data-accent="blue"]
   .arch-modality-icon
-  .marketing-icon {
+  .material-symbols-outlined {
   color: var(--color-info);
 }
 .homepage-root .arch-modality-card[data-accent="purple"] {
@@ -903,7 +897,7 @@
 .homepage-root
   .arch-modality-card[data-accent="purple"]
   .arch-modality-icon
-  .marketing-icon {
+  .material-symbols-outlined {
   color: var(--color-primary-light);
 }
 .homepage-root .arch-modality-card[data-accent="pink"] {
@@ -915,7 +909,7 @@
 .homepage-root
   .arch-modality-card[data-accent="pink"]
   .arch-modality-icon
-  .marketing-icon {
+  .material-symbols-outlined {
   color: var(--color-error);
 }
 .homepage-root .arch-modality-card[data-accent="amber"] {
@@ -927,7 +921,7 @@
 .homepage-root
   .arch-modality-card[data-accent="amber"]
   .arch-modality-icon
-  .marketing-icon {
+  .material-symbols-outlined {
   color: var(--color-warning);
 }
 .homepage-root .arch-modality-card[data-accent="green"] {
@@ -939,7 +933,7 @@
 .homepage-root
   .arch-modality-card[data-accent="green"]
   .arch-modality-icon
-  .marketing-icon {
+  .material-symbols-outlined {
   color: var(--color-success);
 }
 
@@ -1032,7 +1026,7 @@
   margin-bottom: 0.75rem;
   font-weight: 500;
 }
-.homepage-root .pillar-pain .marketing-icon {
+.homepage-root .pillar-pain .material-symbols-outlined {
   font-size: 18px;
   color: var(--color-primary);
 }
@@ -1229,7 +1223,7 @@
   color: var(--homepage-terminal-foreground);
   border-bottom-color: var(--color-primary);
 }
-.homepage-root .agent-terminal-tab .marketing-icon {
+.homepage-root .agent-terminal-tab .material-symbols-outlined {
   color: inherit;
 }
 .homepage-root .agent-terminal-panel {
@@ -1659,7 +1653,7 @@
   font-size: var(--text-body-md);
   color: var(--color-foreground);
 }
-.homepage-root .pricing-feature .marketing-icon {
+.homepage-root .pricing-feature .material-symbols-outlined {
   color: var(--color-success);
   flex-shrink: 0;
 }
@@ -1813,7 +1807,7 @@
     height: 40px;
     border-radius: var(--radius-lg);
   }
-  .homepage-root .mock-nav-item .marketing-icon {
+  .homepage-root .mock-nav-item .material-symbols-outlined {
     font-size: 22px;
   }
 

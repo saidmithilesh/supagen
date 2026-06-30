@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRightIcon, ListFilterIcon } from "lucide-react";
 
 import { Badge } from "@supagen/ui/components/badge";
 import { Button } from "@supagen/ui/components/button";
@@ -10,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@supagen/ui/components/card";
+import { MaterialIcon } from "@supagen/ui/components/material-icon";
 
 const modelGroups = [
   {
@@ -68,7 +68,7 @@ export function ModelsCatalogPage() {
             <Card key={group.name}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ListFilterIcon />
+                  <MaterialIcon name="filter_list" />
                   {group.name}
                 </CardTitle>
                 <CardDescription>{group.description}</CardDescription>
@@ -77,7 +77,11 @@ export function ModelsCatalogPage() {
                 <Button variant="outline" asChild>
                   <a href="/auth?mode=sign-up&redirect_url=/app">
                     Open workspace
-                    <ArrowRightIcon data-icon="inline-end" />
+                    <MaterialIcon
+                      data-icon="inline-end"
+                      name="arrow_forward"
+                      size={16}
+                    />
                   </a>
                 </Button>
               </CardContent>
