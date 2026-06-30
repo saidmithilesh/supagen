@@ -129,8 +129,8 @@ priority, or first-class implementation module.
   Groq, and additional providers as the product expands.
 - BYOK provider keys scoped to workspaces.
 - Multiple workspace keys for the same provider.
-- Supagen global provider keys funded by organization-level AI credits.
-- Funding-source resolution before invocation execution.
+- Supagen global provider keys funded by billable-account AI credits.
+- Invocation funding-route resolution before invocation execution.
 - Fallback from Supagen credits/global keys to BYOK where appropriate when
   credits are exhausted.
 - Encrypted provider key storage.
@@ -215,6 +215,7 @@ priority, or first-class implementation module.
 - Precise post-completion cost calculation.
 - Cost calculation from provider-returned usage plus Supagen-maintained pricing
   datasheets.
+- Final charge amounts supplied to billing for AI credit consumption.
 - Cost attribution by workspace, template, model, provider, customer-app end
   user/tenant, and Supagen invocation API key.
 - Usage metering beyond cost, including request counts, token counts, audio
@@ -232,7 +233,7 @@ priority, or first-class implementation module.
 - Supagen customer billing.
 - Monthly platform subscription tiers.
 - Usage-based prepaid AI credits purchased through ad hoc purchases/recharges.
-- Organization-level AI credit balances.
+- Billable-account-owned AI credit balances.
 - Credit consumption by workspaces under the organization.
 - Dodo Payments integration for payments, invoices, and receipts.
 

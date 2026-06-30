@@ -1,0 +1,5 @@
+# AI Credit Product Model
+
+Supagen models AI credits as a USD-denominated prepaid billing entitlement owned by a billable account and consumed by Supagen-funded invocations after a final charge amount is calculated outside Billing. Payment-backed recharges increase AI credit balance only after payment-provider success is confirmed, while grants, Onboarding Credit Grants, refunds, adjustments, disputes, and visible bounded overruns are separate billing concepts rather than overloaded recharge states.
+
+This preserves a simple prepaid product model while still handling real invocation settlement behavior, where final charge amounts may be known only after execution. AI credits do not expire in the initial product model, granted credits are not cash-refundable, Billing reports commercial state and current balance rather than deciding caller actions, and every correction to prior credit activity is represented as a separate AI credit movement rather than by rewriting the original business event.
