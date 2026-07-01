@@ -1,6 +1,6 @@
 import {
   mapOpenRouterCatalogModels,
-  mapOpenRouterModelEndpointCapabilities,
+  mapOpenRouterModelEndpointMetadata,
 } from "./openrouter-model-catalog.mapper";
 
 describe(mapOpenRouterCatalogModels.name, () => {
@@ -34,6 +34,7 @@ describe(mapOpenRouterCatalogModels.name, () => {
             author: "anthropic",
             author_display_name: "Anthropic",
             description: "Frontier Sonnet-class model.",
+            warning_message: "This model may be rate limited.",
             created_at: "2026-06-30T18:11:23.921Z",
             context_length: 1_000_000,
             input_modalities: ["text", "image", null],
@@ -94,6 +95,7 @@ describe(mapOpenRouterCatalogModels.name, () => {
         permaslug: "anthropic/claude-sonnet-5-20260630",
         displayName: "Claude Sonnet 5",
         description: "Frontier Sonnet-class model.",
+        warningMessage: "This model may be rate limited.",
         authorName: "Anthropic",
         authorIconUrl: "https://openrouter.ai/images/icons/Anthropic.svg",
         inputModalities: ["text", "image"],
@@ -108,6 +110,62 @@ describe(mapOpenRouterCatalogModels.name, () => {
           "structured_outputs",
           "response_format",
           "verbosity",
+        ],
+        supportedParameterDetails: [
+          {
+            key: "max_tokens",
+            name: "Max Tokens",
+            type: "integer",
+            values: "Up to 66K",
+          },
+          {
+            key: "stop",
+            name: "Stop",
+            type: "string or array",
+            values: "Any",
+          },
+          {
+            key: "reasoning",
+            name: "Reasoning",
+            type: "object",
+            values: "Any",
+          },
+          {
+            key: "include_reasoning",
+            name: "Include Reasoning",
+            type: "boolean",
+            values: "true or false",
+          },
+          {
+            key: "tools",
+            name: "Tools",
+            type: "array",
+            values: "Any",
+          },
+          {
+            key: "tool_choice",
+            name: "Tool Choice",
+            type: "string or object",
+            values: "auto, function, none, required",
+          },
+          {
+            key: "structured_outputs",
+            name: "Structured Outputs",
+            type: "boolean",
+            values: "true or false",
+          },
+          {
+            key: "response_format",
+            name: "Response Format",
+            type: "object",
+            values: "Any",
+          },
+          {
+            key: "verbosity",
+            name: "Verbosity",
+            type: "enum",
+            values: "high, low, medium",
+          },
         ],
         capabilities: [
           {
@@ -267,7 +325,7 @@ describe(mapOpenRouterCatalogModels.name, () => {
     });
 
     expect(
-      mapOpenRouterModelEndpointCapabilities(model, {
+      mapOpenRouterModelEndpointMetadata(model, {
         data: [
           {
             supported_parameters: [],
@@ -277,13 +335,124 @@ describe(mapOpenRouterCatalogModels.name, () => {
           },
         ],
       }),
+    ).toEqual({
+      capabilities: [
+        {
+          key: "text.web-search",
+          label: "Web Search",
+          outputModality: "text",
+        },
+      ],
+      supportedParameterDetails: [
+        {
+          key: "web_search_options",
+          name: "Web Search Options",
+          type: "object",
+          values: "Any",
+        },
+      ],
+    });
+  });
+
+  it("unifies supported parameter values across model endpoints", () => {
+    const model = mapSingleModel({
+      supported_parameters: ["temperature"],
+    });
+
+    expect(
+      mapOpenRouterModelEndpointMetadata(model, {
+        data: [
+          {
+            max_completion_tokens: 4096,
+            supported_parameters: ["temperature", "max_tokens", "tool_choice"],
+            features: {
+              supports_tool_choice: {
+                literal_auto: true,
+                literal_required: true,
+              },
+            },
+          },
+          {
+            max_completion_tokens: 8192,
+            supported_parameters: ["top_p", "max_tokens", "tool_choice"],
+            features: {
+              supports_tool_choice: {
+                literal_none: true,
+                literal_auto: true,
+              },
+            },
+          },
+        ],
+      }).supportedParameterDetails,
     ).toEqual([
       {
-        key: "text.web-search",
-        label: "Web Search",
-        outputModality: "text",
+        key: "temperature",
+        name: "Temperature",
+        type: "number",
+        values: "0 to 2",
+      },
+      {
+        key: "top_p",
+        name: "Top P",
+        type: "number",
+        values: "0 to 1",
+      },
+      {
+        key: "max_tokens",
+        name: "Max Tokens",
+        type: "integer",
+        values: "Up to 4K, Up to 8K",
+      },
+      {
+        key: "tool_choice",
+        name: "Tool Choice",
+        type: "string or object",
+        values: "auto, none, required",
       },
     ]);
+  });
+
+  it("maps image parameter ranges and enums from endpoint metadata", () => {
+    const model = mapSingleModel(
+      {
+        supported_parameters: ["seed"],
+        supported_image_parameters: {
+          aspect_ratios: ["1:1", "16:9"],
+          backgrounds: ["transparent", "opaque"],
+          input_references: { min: 0, max: 16 },
+          n: { min: 1, max: 10 },
+          output_compression: { min: 0, max: 100 },
+          output_formats: ["png", "webp"],
+          qualities: ["auto", "high"],
+          resolutions: ["1K", "2K"],
+        },
+      },
+      {
+        output_modalities: ["image"],
+      },
+    );
+
+    expect(model.supportedParameterDetails).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: "resolution", values: "1K, 2K" }),
+        expect.objectContaining({ key: "aspect_ratio", values: "1:1, 16:9" }),
+        expect.objectContaining({ key: "quality", values: "auto, high" }),
+        expect.objectContaining({ key: "output_format", values: "png, webp" }),
+        expect.objectContaining({
+          key: "background",
+          values: "opaque, transparent",
+        }),
+        expect.objectContaining({ key: "n", values: "1 to 10" }),
+        expect.objectContaining({
+          key: "input_references",
+          values: "0 to 16 items",
+        }),
+        expect.objectContaining({
+          key: "output_compression",
+          values: "0 to 100",
+        }),
+      ]),
+    );
   });
 
   it("maps approved image capability chips", () => {
@@ -434,6 +603,49 @@ describe(mapOpenRouterCatalogModels.name, () => {
     ).toMatchObject({
       capabilities: [],
     });
+  });
+
+  it("keeps warning-only catalog models without a serving endpoint", () => {
+    expect(
+      mapOpenRouterCatalogModels({
+        data: [
+          {
+            slug: "anthropic/claude-fable-5",
+            permaslug: "anthropic/claude-5-fable-20260609",
+            short_name: "Claude Fable 5",
+            name: "Anthropic: Claude Fable 5",
+            author: "anthropic",
+            author_display_name: "Anthropic",
+            description: "Fable model.",
+            warning_message: "**Access may be interrupted.**",
+            context_length: 1_000_000,
+            input_modalities: ["text", "image", "file"],
+            output_modalities: ["text"],
+            endpoint: null,
+          },
+        ],
+      }),
+    ).toEqual([
+      {
+        slug: "anthropic/claude-fable-5",
+        permaslug: "anthropic/claude-5-fable-20260609",
+        displayName: "Claude Fable 5",
+        description: "Fable model.",
+        warningMessage: "**Access may be interrupted.**",
+        authorName: "Anthropic",
+        authorIconUrl: "https://openrouter.ai/images/icons/Anthropic.svg",
+        inputModalities: ["text", "image", "file"],
+        outputModalities: ["text"],
+        supportedParameters: [],
+        supportedParameterDetails: [],
+        capabilities: [],
+        releaseDate: null,
+        inputPrice: null,
+        outputPrice: null,
+        contextWindowSize: 1_000_000,
+        maxOutputTokens: null,
+      },
+    ]);
   });
 
   it("derives author and model display names from the OpenRouter model name", () => {

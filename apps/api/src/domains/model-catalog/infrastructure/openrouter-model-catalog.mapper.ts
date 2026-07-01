@@ -1,6 +1,7 @@
 import type {
   ModelCatalogCapability,
   ModelCatalogModel,
+  ModelCatalogParameter,
 } from "../domain/model-catalog-model";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai";
@@ -122,32 +123,41 @@ export function mapOpenRouterCatalogModels(
   return models;
 }
 
-export function mapOpenRouterModelEndpointCapabilities(
+export function mapOpenRouterModelEndpointMetadata(
   model: ModelCatalogModel,
   payload: unknown,
-): ModelCatalogCapability[] {
+): Pick<ModelCatalogModel, "capabilities" | "supportedParameterDetails"> {
   const endpoints = getEndpointRecords(payload);
 
   if (endpoints.length === 0) {
-    return model.capabilities;
+    return {
+      capabilities: model.capabilities,
+      supportedParameterDetails: model.supportedParameterDetails,
+    };
   }
 
-  return getModelCapabilities({
+  const input = {
     inputModalities: model.inputModalities,
     outputModalities: model.outputModalities,
     records: endpoints.map((endpoint) => ({
       endpoint,
       model: asRecord(endpoint.model),
     })),
-  });
+  };
+
+  return {
+    capabilities: getModelCapabilities(input),
+    supportedParameterDetails: getModelParameters(input.records),
+  };
 }
 
 function mapOpenRouterCatalogModel(
   record: Record<string, unknown>,
 ): ModelCatalogModel | null {
   const endpoint = asRecord(record.endpoint);
+  const warningMessage = asString(record.warning_message);
 
-  if (!endpoint) {
+  if (!endpoint && !warningMessage) {
     return null;
   }
 
@@ -163,8 +173,15 @@ function mapOpenRouterCatalogModel(
   }
 
   const modelNameParts = getModelNameParts(record);
-  const authorName = getAuthorName(record, endpoint, modelNameParts.authorName);
-  const supportedParameters = asStringArray(endpoint.supported_parameters);
+  const endpointRecord = endpoint ?? {};
+  const authorName = getAuthorName(
+    record,
+    endpointRecord,
+    modelNameParts.authorName,
+  );
+  const supportedParameters = asStringArray(
+    endpointRecord.supported_parameters,
+  );
 
   return {
     slug,
@@ -175,22 +192,31 @@ function mapOpenRouterCatalogModel(
       asString(record.name) ??
       permaslug,
     description: asString(record.description),
+    warningMessage,
     authorName,
-    authorIconUrl: getAuthorIconUrl(record, endpoint, authorName),
+    authorIconUrl: getAuthorIconUrl(record, endpointRecord, authorName),
     inputModalities: asStringArray(record.input_modalities),
     outputModalities: asStringArray(record.output_modalities),
     supportedParameters,
+    supportedParameterDetails: getModelParameters([
+      { endpoint: endpointRecord, model: record },
+    ]),
     capabilities: getModelCapabilities({
       inputModalities: asStringArray(record.input_modalities),
       outputModalities: asStringArray(record.output_modalities),
-      records: [{ endpoint, model: record }],
+      records: [{ endpoint: endpointRecord, model: record }],
     }),
     releaseDate: asString(record.release_date) ?? asString(record.created_at),
-    inputPrice: getDisplayPrice(endpoint, INPUT_DISPLAY_LABELS, "prompt"),
-    outputPrice: getDisplayPrice(endpoint, OUTPUT_DISPLAY_LABELS, "completion"),
+    inputPrice: getDisplayPrice(endpointRecord, INPUT_DISPLAY_LABELS, "prompt"),
+    outputPrice: getDisplayPrice(
+      endpointRecord,
+      OUTPUT_DISPLAY_LABELS,
+      "completion",
+    ),
     contextWindowSize:
-      asNumber(endpoint.context_length) ?? asNumber(record.context_length),
-    maxOutputTokens: asNumber(endpoint.max_completion_tokens),
+      asNumber(endpointRecord.context_length) ??
+      asNumber(record.context_length),
+    maxOutputTokens: asNumber(endpointRecord.max_completion_tokens),
   };
 }
 
@@ -567,6 +593,499 @@ const MODEL_CAPABILITY_DEFINITIONS: Array<
       hasOutputModality(outputModalities, "rerank"),
   },
 ];
+
+const OPENROUTER_PARAMETER_DEFINITIONS = new Map<
+  string,
+  { name: string; type: string; values: string }
+>([
+  ["background", { name: "Background", type: "enum", values: "Any" }],
+  [
+    "frequency_penalty",
+    { name: "Frequency Penalty", type: "number", values: "-2 to 2" },
+  ],
+  [
+    "include_reasoning",
+    { name: "Include Reasoning", type: "boolean", values: "true or false" },
+  ],
+  ["logit_bias", { name: "Logit Bias", type: "object", values: "Any" }],
+  ["logprobs", { name: "Logprobs", type: "boolean", values: "true or false" }],
+  ["max_tokens", { name: "Max Tokens", type: "integer", values: "Any" }],
+  ["min_p", { name: "Min P", type: "number", values: "0 to 1" }],
+  ["n", { name: "Number Of Outputs", type: "integer", values: "Any" }],
+  [
+    "output_compression",
+    { name: "Output Compression", type: "integer", values: "0 to 100" },
+  ],
+  ["output_format", { name: "Output Format", type: "enum", values: "Any" }],
+  [
+    "parallel_tool_calls",
+    { name: "Parallel Tool Calls", type: "boolean", values: "true or false" },
+  ],
+  [
+    "presence_penalty",
+    { name: "Presence Penalty", type: "number", values: "-2 to 2" },
+  ],
+  ["quality", { name: "Quality", type: "enum", values: "Any" }],
+  ["reasoning", { name: "Reasoning", type: "object", values: "Any" }],
+  [
+    "repetition_penalty",
+    { name: "Repetition Penalty", type: "number", values: "0 to 2" },
+  ],
+  [
+    "response_format",
+    { name: "Response Format", type: "object", values: "Any" },
+  ],
+  ["seed", { name: "Seed", type: "integer", values: "Any" }],
+  ["stop", { name: "Stop", type: "string or array", values: "Any" }],
+  [
+    "structured_outputs",
+    { name: "Structured Outputs", type: "boolean", values: "true or false" },
+  ],
+  ["temperature", { name: "Temperature", type: "number", values: "0 to 2" }],
+  [
+    "tool_choice",
+    { name: "Tool Choice", type: "string or object", values: "Any" },
+  ],
+  ["tools", { name: "Tools", type: "array", values: "Any" }],
+  ["top_a", { name: "Top A", type: "number", values: "0 to 1" }],
+  ["top_k", { name: "Top K", type: "integer", values: "0 or greater" }],
+  ["top_logprobs", { name: "Top Logprobs", type: "integer", values: "Any" }],
+  ["top_p", { name: "Top P", type: "number", values: "0 to 1" }],
+  [
+    "verbosity",
+    { name: "Verbosity", type: "enum", values: "low, medium, high" },
+  ],
+  [
+    "web_search_options",
+    { name: "Web Search Options", type: "object", values: "Any" },
+  ],
+]);
+
+const PARAMETER_DISPLAY_ORDER = [
+  "temperature",
+  "top_p",
+  "top_k",
+  "min_p",
+  "top_a",
+  "frequency_penalty",
+  "presence_penalty",
+  "repetition_penalty",
+  "max_tokens",
+  "stop",
+  "seed",
+  "logit_bias",
+  "logprobs",
+  "top_logprobs",
+  "reasoning",
+  "include_reasoning",
+  "tools",
+  "tool_choice",
+  "parallel_tool_calls",
+  "structured_outputs",
+  "response_format",
+  "web_search_options",
+  "verbosity",
+  "resolution",
+  "aspect_ratio",
+  "size",
+  "quality",
+  "output_format",
+  "background",
+  "n",
+  "input_references",
+  "output_compression",
+  "duration",
+  "frame_images",
+  "generate_audio",
+];
+const PARAMETER_DISPLAY_INDEX = new Map(
+  PARAMETER_DISPLAY_ORDER.map((key, index) => [key, index] as const),
+);
+
+function getModelParameters(
+  records: Array<{
+    endpoint: Record<string, unknown>;
+    model: Record<string, unknown> | null;
+  }>,
+): ModelCatalogParameter[] {
+  const parametersByKey = new Map<string, MutableModelCatalogParameter>();
+
+  for (const { endpoint } of records) {
+    for (const parameterKey of asStringArray(endpoint.supported_parameters)) {
+      addParameter(
+        parametersByKey,
+        getGenericParameter(parameterKey, endpoint),
+      );
+    }
+
+    for (const parameter of getImageParametersList(endpoint)) {
+      addParameter(parametersByKey, parameter);
+    }
+
+    for (const parameter of getVideoParametersList(endpoint)) {
+      addParameter(parametersByKey, parameter);
+    }
+
+    for (const parameter of getPassthroughParameters(endpoint)) {
+      addParameter(parametersByKey, parameter);
+    }
+  }
+
+  return [...parametersByKey.values()]
+    .map(({ valueSet, ...parameter }) => ({
+      ...parameter,
+      values:
+        valueSet.size > 0
+          ? sortParameterValues([...valueSet]).join(", ")
+          : parameter.values,
+    }))
+    .sort(compareModelParameters);
+}
+
+function getGenericParameter(
+  rawKey: string,
+  endpoint: Record<string, unknown>,
+): ModelCatalogParameter {
+  const key = normalizeParameterKey(rawKey);
+  const definition = OPENROUTER_PARAMETER_DEFINITIONS.get(key);
+
+  if (key === "max_tokens") {
+    const maxCompletionTokens = asFiniteNumber(endpoint.max_completion_tokens);
+
+    return {
+      key,
+      name: definition?.name ?? formatParameterName(key),
+      type: definition?.type ?? "any",
+      values:
+        maxCompletionTokens && maxCompletionTokens > 0
+          ? `Up to ${formatCompactNumber(maxCompletionTokens)}`
+          : (definition?.values ?? "Any"),
+    };
+  }
+
+  if (key === "tool_choice") {
+    return {
+      key,
+      name: definition?.name ?? formatParameterName(key),
+      type: definition?.type ?? "any",
+      values: getToolChoiceValues(endpoint) ?? definition?.values ?? "Any",
+    };
+  }
+
+  if (key === "reasoning") {
+    return {
+      key,
+      name: definition?.name ?? formatParameterName(key),
+      type: definition?.type ?? "any",
+      values: getReasoningValues(endpoint) ?? definition?.values ?? "Any",
+    };
+  }
+
+  return {
+    key,
+    name: definition?.name ?? formatParameterName(key),
+    type: definition?.type ?? "any",
+    values: definition?.values ?? "Any",
+  };
+}
+
+function getImageParametersList(
+  endpoint: Record<string, unknown>,
+): ModelCatalogParameter[] {
+  const parameters = getImageParameters(endpoint);
+
+  if (!parameters) {
+    return [];
+  }
+
+  return [
+    getEnumParameter("resolution", "Resolution", parameters.resolutions),
+    getEnumParameter("aspect_ratio", "Aspect Ratio", parameters.aspect_ratios),
+    getEnumParameter(
+      "output_format",
+      "Output Format",
+      parameters.output_formats,
+    ),
+    getEnumParameter("quality", "Quality", parameters.qualities),
+    getEnumParameter("background", "Background", parameters.backgrounds),
+    getRangeParameter("n", "Number Of Outputs", "integer", parameters.n),
+    getRangeParameter(
+      "input_references",
+      "Input References",
+      "array",
+      parameters.input_references,
+      "items",
+    ),
+    getRangeParameter(
+      "output_compression",
+      "Output Compression",
+      "integer",
+      parameters.output_compression,
+    ),
+  ].filter((parameter): parameter is ModelCatalogParameter =>
+    Boolean(parameter),
+  );
+}
+
+function getVideoParametersList(
+  endpoint: Record<string, unknown>,
+): ModelCatalogParameter[] {
+  const parameters = getVideoParameters(endpoint);
+
+  if (!parameters) {
+    return [];
+  }
+
+  return [
+    getEnumParameter("duration", "Duration", parameters.supported_durations),
+    getEnumParameter(
+      "frame_images",
+      "Frame Images",
+      parameters.supported_frame_images,
+    ),
+    getEnumParameter("size", "Size", parameters.supported_sizes),
+    getEnumParameter(
+      "resolution",
+      "Resolution",
+      parameters.supported_resolutions,
+    ),
+    getEnumParameter(
+      "aspect_ratio",
+      "Aspect Ratio",
+      parameters.supported_aspect_ratios,
+    ),
+    getBooleanParameter(
+      "generate_audio",
+      "Generate Audio",
+      parameters.generate_audio,
+    ),
+    getBooleanParameter("seed", "Seed", parameters.seed, "integer", "Any"),
+  ].filter((parameter): parameter is ModelCatalogParameter =>
+    Boolean(parameter),
+  );
+}
+
+function getPassthroughParameters(
+  endpoint: Record<string, unknown>,
+): ModelCatalogParameter[] {
+  return asStringArray(endpoint.allowed_passthrough_parameters).map((key) => ({
+    key: normalizeParameterKey(key),
+    name: formatParameterName(key),
+    type: "any",
+    values: "Any",
+  }));
+}
+
+function getEnumParameter(
+  key: string,
+  name: string,
+  values: unknown,
+): ModelCatalogParameter | null {
+  const enumValues = asStringArray(values);
+
+  if (enumValues.length === 0) {
+    return null;
+  }
+
+  return {
+    key,
+    name,
+    type: "enum",
+    values: enumValues.join(", "),
+  };
+}
+
+function getRangeParameter(
+  key: string,
+  name: string,
+  type: string,
+  range: unknown,
+  unit?: string,
+): ModelCatalogParameter | null {
+  const rangeRecord = asRecord(range);
+
+  if (!rangeRecord) {
+    return null;
+  }
+
+  const min = asFiniteNumber(rangeRecord.min);
+  const max = asFiniteNumber(rangeRecord.max);
+
+  if (min === null && max === null) {
+    return null;
+  }
+
+  return {
+    key,
+    name,
+    type,
+    values: formatRange(min, max, unit),
+  };
+}
+
+function getBooleanParameter(
+  key: string,
+  name: string,
+  value: unknown,
+  type = "boolean",
+  values = "true or false",
+): ModelCatalogParameter | null {
+  return asBoolean(value) === true ? { key, name, type, values } : null;
+}
+
+function addParameter(
+  parametersByKey: Map<string, MutableModelCatalogParameter>,
+  parameter: ModelCatalogParameter,
+) {
+  const key = normalizeParameterKey(parameter.key);
+  const existing = parametersByKey.get(key);
+
+  if (!existing) {
+    parametersByKey.set(key, {
+      ...parameter,
+      key,
+      valueSet:
+        parameter.values === "Any"
+          ? new Set()
+          : new Set(splitParameterValues(parameter.values)),
+    });
+    return;
+  }
+
+  existing.type = mergeParameterTypes(existing.type, parameter.type);
+
+  if (parameter.values === "Any") {
+    existing.values = existing.valueSet.size === 0 ? "Any" : existing.values;
+    return;
+  }
+
+  for (const value of splitParameterValues(parameter.values)) {
+    existing.valueSet.add(value);
+  }
+}
+
+function getToolChoiceValues(endpoint: Record<string, unknown>) {
+  const supportedToolChoice = asRecord(
+    asRecord(endpoint.features)?.supports_tool_choice,
+  );
+
+  if (!supportedToolChoice) {
+    return null;
+  }
+
+  const values = [
+    ["none", supportedToolChoice.literal_none],
+    ["auto", supportedToolChoice.literal_auto],
+    ["required", supportedToolChoice.literal_required],
+    ["function", supportedToolChoice.type_function],
+  ]
+    .filter(([, value]) => asBoolean(value) === true)
+    .map(([label]) => label);
+
+  return values.length > 0 ? values.join(", ") : null;
+}
+
+function getReasoningValues(endpoint: Record<string, unknown>) {
+  const model = asRecord(endpoint.model);
+  const reasoningConfig =
+    asRecord(asRecord(model?.features)?.reasoning_config) ??
+    asRecord(model?.reasoning_config);
+  const reasoningEfforts = asStringArray(
+    reasoningConfig?.supported_reasoning_efforts,
+  );
+
+  return reasoningEfforts.length > 0 ? reasoningEfforts.join(", ") : null;
+}
+
+function formatRange(
+  min: number | null,
+  max: number | null,
+  unit: string | undefined,
+) {
+  const suffix = unit ? ` ${unit}` : "";
+
+  if (min !== null && max !== null) {
+    return `${formatRangeNumber(min)} to ${formatRangeNumber(max)}${suffix}`;
+  }
+
+  if (max !== null) {
+    return `Up to ${formatRangeNumber(max)}${suffix}`;
+  }
+
+  return `${formatRangeNumber(min ?? 0)}${suffix} or greater`;
+}
+
+function formatCompactNumber(value: number) {
+  return Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 0,
+    notation: "compact",
+  }).format(value);
+}
+
+function formatRangeNumber(value: number) {
+  return Number.isInteger(value) ? String(value) : String(value);
+}
+
+function splitParameterValues(value: string) {
+  if (value.includes(" to ") || value.startsWith("Up to ")) {
+    return [value];
+  }
+
+  return value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function sortParameterValues(values: string[]) {
+  return values.sort((left, right) =>
+    left.localeCompare(right, "en-US", {
+      numeric: true,
+      sensitivity: "base",
+    }),
+  );
+}
+
+function mergeParameterTypes(left: string, right: string) {
+  return left === right ? left : "any";
+}
+
+function compareModelParameters(
+  left: ModelCatalogParameter,
+  right: ModelCatalogParameter,
+) {
+  const leftIndex = PARAMETER_DISPLAY_INDEX.get(left.key);
+  const rightIndex = PARAMETER_DISPLAY_INDEX.get(right.key);
+
+  if (leftIndex !== undefined || rightIndex !== undefined) {
+    return (
+      (leftIndex ?? Number.MAX_SAFE_INTEGER) -
+      (rightIndex ?? Number.MAX_SAFE_INTEGER)
+    );
+  }
+
+  return left.name.localeCompare(right.name, "en-US", {
+    sensitivity: "base",
+  });
+}
+
+function normalizeParameterKey(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function formatParameterName(parameter: string) {
+  const normalized = parameter.trim().replace(/[_-]+/g, " ");
+
+  if (!normalized) {
+    return "Unknown";
+  }
+
+  return normalized.replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+type MutableModelCatalogParameter = ModelCatalogParameter & {
+  valueSet: Set<string>;
+};
 
 function supportsToolCalling(
   endpoint: Record<string, unknown>,

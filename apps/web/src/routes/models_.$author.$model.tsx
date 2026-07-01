@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 
 import "../styles/homepage.css";
 
+import { Alert, AlertDescription } from "@supagen/ui/components/alert";
 import {
   Avatar,
   AvatarFallback,
@@ -115,6 +116,8 @@ function ModelDetails({ model }: { model: ModelCatalogModel }) {
 
   return (
     <article className="flex flex-col gap-6">
+      <ModelWarningMessage warningMessage={model.warningMessage} />
+
       <section className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(18rem,3fr)]">
         <header className="flex flex-col gap-5 rounded-lg border border-border bg-card p-5 sm:p-6">
           <div className="flex min-w-0 items-start gap-4">
@@ -133,9 +136,7 @@ function ModelDetails({ model }: { model: ModelCatalogModel }) {
                   </span>
                 ) : null}
               </div>
-              <h1 className="font-heading text-3xl leading-tight font-semibold tracking-normal">
-                {model.displayName}
-              </h1>
+              <ModelDisplayNameHeading displayName={model.displayName} />
             </div>
           </div>
 
@@ -159,11 +160,124 @@ function ModelDetails({ model }: { model: ModelCatalogModel }) {
         </div>
       </section>
 
+      <ModelParametersTable model={model} />
+
       <ModelModalityProfile
         model={model}
         primaryOutputModality={primaryOutputModality}
       />
     </article>
+  );
+}
+
+function ModelDisplayNameHeading({ displayName }: { displayName: string }) {
+  const displayNameParts = getDisplayNameParts(displayName);
+
+  return (
+    <h1
+      aria-label={displayName}
+      className="font-heading leading-tight font-semibold tracking-normal"
+    >
+      <span className="block text-[24px]">{displayNameParts.name}</span>
+      {displayNameParts.parenthesized ? (
+        <span className="mt-0.5 block text-[20px] text-muted-foreground">
+          {displayNameParts.parenthesized}
+        </span>
+      ) : null}
+    </h1>
+  );
+}
+
+function ModelWarningMessage({
+  warningMessage,
+}: {
+  warningMessage: string | null;
+}) {
+  if (!warningMessage) {
+    return null;
+  }
+
+  return (
+    <Alert className="border-warning/30 bg-warning-light text-warning-foreground">
+      <AlertDescription className="text-warning-foreground">
+        <ReactMarkdown
+          components={{
+            a: ({ children, href }) => (
+              <a
+                className="font-medium underline underline-offset-4 hover:text-warning"
+                href={href}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {children}
+              </a>
+            ),
+            p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+            strong: ({ children }) => (
+              <strong className="font-semibold">{children}</strong>
+            ),
+          }}
+          remarkPlugins={[remarkGfm]}
+        >
+          {warningMessage}
+        </ReactMarkdown>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+function ModelParametersTable({ model }: { model: ModelCatalogModel }) {
+  if (model.supportedParameterDetails.length === 0) {
+    return null;
+  }
+
+  return (
+    <section>
+      <h2 className="mb-3 font-heading text-[20px] leading-7 font-semibold tracking-normal">
+        Supported Parameters
+      </h2>
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[44rem] border-collapse text-left text-sm">
+            <thead className="border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground uppercase">
+              <tr>
+                <th className="w-[24%] px-3 py-3 font-medium whitespace-nowrap">
+                  Parameter Name
+                </th>
+                <th className="w-[24%] px-2 py-3 font-medium whitespace-nowrap">
+                  Key
+                </th>
+                <th className="w-[14%] px-2 py-3 font-medium whitespace-nowrap">
+                  Type
+                </th>
+                <th className="px-3 py-3 font-medium whitespace-nowrap">
+                  Values
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {model.supportedParameterDetails.map((parameter) => (
+                <tr
+                  className="border-b border-border last:border-b-0 hover:bg-muted/30"
+                  key={parameter.key}
+                >
+                  <td className="px-3 py-3 font-medium">{parameter.name}</td>
+                  <td className="px-2 py-3 font-mono text-xs text-muted-foreground">
+                    {parameter.key}
+                  </td>
+                  <td className="px-2 py-3 text-muted-foreground">
+                    {parameter.type}
+                  </td>
+                  <td className="px-3 py-3 text-muted-foreground">
+                    {parameter.values}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -500,6 +614,32 @@ function formatParameterName(parameter: string) {
   }
 
   return normalized.replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function getDisplayNameParts(displayName: string) {
+  if (displayName.length <= 40) {
+    return { name: displayName, parenthesized: null };
+  }
+
+  const openingParenthesisIndex = displayName.indexOf("(");
+  const closingParenthesisIndex = displayName.indexOf(
+    ")",
+    openingParenthesisIndex + 1,
+  );
+
+  if (
+    openingParenthesisIndex <= 0 ||
+    closingParenthesisIndex <= openingParenthesisIndex
+  ) {
+    return { name: displayName, parenthesized: null };
+  }
+
+  const name = displayName.slice(0, openingParenthesisIndex).trim();
+  const parenthesized = displayName.slice(openingParenthesisIndex).trim();
+
+  return name && parenthesized
+    ? { name, parenthesized }
+    : { name: displayName, parenthesized: null };
 }
 
 function hasConditionalDisplayPrice(model: ModelCatalogModel) {

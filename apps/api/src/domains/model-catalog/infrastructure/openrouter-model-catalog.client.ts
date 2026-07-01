@@ -5,7 +5,7 @@ import type { ModelCatalogSource } from "../application/model-catalog-source";
 import type { ModelCatalogModel } from "../domain/model-catalog-model";
 import {
   mapOpenRouterCatalogModels,
-  mapOpenRouterModelEndpointCapabilities,
+  mapOpenRouterModelEndpointMetadata,
 } from "./openrouter-model-catalog.mapper";
 
 const OPENROUTER_CATALOG_MODELS_URL =
@@ -45,7 +45,7 @@ export class OpenRouterModelCatalogClient implements ModelCatalogSource {
     }
   }
 
-  async getModelCapabilities(model: ModelCatalogModel) {
+  async getModelEndpointMetadata(model: ModelCatalogModel) {
     const url = new URL(OPENROUTER_MODEL_ENDPOINTS_URL);
     url.searchParams.set("permaslug", model.permaslug);
 
@@ -63,6 +63,13 @@ export class OpenRouterModelCatalogClient implements ModelCatalogSource {
       );
     }
 
+    if (response.status === 404 && model.warningMessage) {
+      return {
+        capabilities: model.capabilities,
+        supportedParameterDetails: model.supportedParameterDetails,
+      };
+    }
+
     if (!response.ok) {
       throw new ModelCatalogSourceUnavailableError(
         `OpenRouter model endpoints request failed with status ${response.status}.`,
@@ -70,10 +77,7 @@ export class OpenRouterModelCatalogClient implements ModelCatalogSource {
     }
 
     try {
-      return mapOpenRouterModelEndpointCapabilities(
-        model,
-        await response.json(),
-      );
+      return mapOpenRouterModelEndpointMetadata(model, await response.json());
     } catch (error) {
       throw new ModelCatalogSourceUnavailableError(
         getErrorMessage(

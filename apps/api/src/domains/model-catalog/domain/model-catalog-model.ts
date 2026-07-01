@@ -3,11 +3,13 @@ export type ModelCatalogModel = {
   permaslug: string;
   displayName: string;
   description: string | null;
+  warningMessage: string | null;
   authorName: string | null;
   authorIconUrl: string | null;
   inputModalities: string[];
   outputModalities: string[];
   supportedParameters: string[];
+  supportedParameterDetails: ModelCatalogParameter[];
   capabilities: ModelCatalogCapability[];
   releaseDate: string | null;
   inputPrice: string | null;
@@ -20,6 +22,13 @@ export type ModelCatalogCapability = {
   key: string;
   label: string;
   outputModality: string;
+};
+
+export type ModelCatalogParameter = {
+  key: string;
+  name: string;
+  type: string;
+  values: string;
 };
 
 export type ModelCatalogFilters = {

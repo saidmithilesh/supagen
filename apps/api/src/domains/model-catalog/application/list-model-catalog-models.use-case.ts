@@ -58,9 +58,12 @@ export class ListModelCatalogModelsUseCase {
       throw new ModelCatalogModelNotFoundError(modelRef);
     }
 
+    const endpointMetadata =
+      await this.modelCatalogSource.getModelEndpointMetadata(model);
+
     return {
       ...model,
-      capabilities: await this.modelCatalogSource.getModelCapabilities(model),
+      ...endpointMetadata,
     };
   }
 

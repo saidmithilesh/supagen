@@ -2,7 +2,9 @@ import type { ModelCatalogModel } from "../domain/model-catalog-model";
 
 export interface ModelCatalogSource {
   listModels(): Promise<ModelCatalogModel[]>;
-  getModelCapabilities(
+  getModelEndpointMetadata(
     model: ModelCatalogModel,
-  ): Promise<ModelCatalogModel["capabilities"]>;
+  ): Promise<
+    Pick<ModelCatalogModel, "capabilities" | "supportedParameterDetails">
+  >;
 }

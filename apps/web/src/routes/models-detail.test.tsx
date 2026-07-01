@@ -19,11 +19,33 @@ describe(ModelDetailsPage.name, () => {
           displayName: "Claude Sonnet 5",
           description:
             "Frontier **Sonnet-class** model with [docs](https://example.com/claude).",
+          warningMessage:
+            "This **model** may be [rate limited](https://example.com/warning).",
           authorName: "Anthropic",
           authorIconUrl: "https://openrouter.ai/images/icons/Anthropic.svg",
           inputModalities: ["text", "image"],
           outputModalities: ["text"],
           supportedParameters: ["tools", "reasoning"],
+          supportedParameterDetails: [
+            {
+              key: "temperature",
+              name: "Temperature",
+              type: "number",
+              values: "0 to 2",
+            },
+            {
+              key: "tools",
+              name: "Tools",
+              type: "array",
+              values: "Any",
+            },
+            {
+              key: "tool_choice",
+              name: "Tool Choice",
+              type: "string or object",
+              values: "auto, none, required",
+            },
+          ],
           capabilities: [
             {
               key: "text.reasoning",
@@ -64,6 +86,11 @@ describe(ModelDetailsPage.name, () => {
     expect(screen.getByRole("link", { name: "docs" })).toHaveAttribute(
       "href",
       "https://example.com/claude",
+    );
+    expect(screen.getByText("model").tagName).toBe("STRONG");
+    expect(screen.getByRole("link", { name: "rate limited" })).toHaveAttribute(
+      "href",
+      "https://example.com/warning",
     );
     const supportedModalities = screen
       .getByText("Supported Modalities")
@@ -126,6 +153,29 @@ describe(ModelDetailsPage.name, () => {
     expect(
       within(capabilities).queryByText("Web Search"),
     ).not.toBeInTheDocument();
+    const parameters = getSupportedParametersTable();
+    expect(
+      within(parameters).getByRole("columnheader", {
+        name: "Parameter Name",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(parameters).getByRole("columnheader", { name: "Key" }),
+    ).toBeInTheDocument();
+    expect(
+      within(parameters).getByRole("columnheader", { name: "Type" }),
+    ).toBeInTheDocument();
+    expect(
+      within(parameters).getByRole("columnheader", { name: "Values" }),
+    ).toBeInTheDocument();
+    expect(within(parameters).getByText("Temperature")).toBeInTheDocument();
+    expect(within(parameters).getByText("temperature")).toBeInTheDocument();
+    expect(within(parameters).getByText("number")).toBeInTheDocument();
+    expect(within(parameters).getByText("0 to 2")).toBeInTheDocument();
+    expect(within(parameters).getByText("Tool Choice")).toBeInTheDocument();
+    expect(
+      within(parameters).getByText("auto, none, required"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Text generation model")).toBeInTheDocument();
     expect(screen.getByText("2 parameters")).toBeInTheDocument();
     expect(
@@ -142,11 +192,20 @@ describe(ModelDetailsPage.name, () => {
           permaslug: "xiaomi/mi-vision-pro-20260620",
           displayName: "Mi Vision Pro",
           description: "Image model.",
+          warningMessage: null,
           authorName: "Xiaomi",
           authorIconUrl: "https://openrouter.ai/images/icons/Xiaomi.svg",
           inputModalities: ["text", "image"],
           outputModalities: ["text", "image"],
           supportedParameters: ["style"],
+          supportedParameterDetails: [
+            {
+              key: "quality",
+              name: "Quality",
+              type: "enum",
+              values: "auto, high",
+            },
+          ],
           capabilities: [
             {
               key: "image.text-to-image",
@@ -194,11 +253,13 @@ describe(ModelDetailsPage.name, () => {
           permaslug: "unknown/no-context-20260701",
           displayName: "No Context Model",
           description: null,
+          warningMessage: null,
           authorName: "Unknown",
           authorIconUrl: null,
           inputModalities: ["text"],
           outputModalities: ["text"],
           supportedParameters: [],
+          supportedParameterDetails: [],
           capabilities: [],
           releaseDate: null,
           inputPrice: null,
@@ -220,6 +281,50 @@ describe(ModelDetailsPage.name, () => {
     expect(
       screen.queryByRole("heading", { name: "Context Window" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("splits long parenthesized model names on the detail page", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          slug: "example/long-name",
+          permaslug: "example/long-name-20260701",
+          displayName:
+            "Example Ultra Detailed Generation Model (Experimental Preview)",
+          description: null,
+          warningMessage: null,
+          authorName: "Example",
+          authorIconUrl: null,
+          inputModalities: ["text"],
+          outputModalities: ["text"],
+          supportedParameters: [],
+          supportedParameterDetails: [],
+          capabilities: [],
+          releaseDate: null,
+          inputPrice: null,
+          outputPrice: null,
+          contextWindowSize: 0,
+          maxOutputTokens: null,
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderWithQueryClient(
+      <ModelDetailsPage modelRef="example/long-name-20260701" />,
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Example Ultra Detailed Generation Model (Experimental Preview)",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Example Ultra Detailed Generation Model"),
+    ).toHaveClass("text-[24px]");
+    expect(screen.getByText("(Experimental Preview)")).toHaveClass(
+      "text-[20px]",
+    );
   });
 
   it("renders a not-found state for missing catalog models", async () => {
@@ -253,6 +358,17 @@ function getFirstByLabelText(label: string) {
 
 function getModelCapabilities() {
   const section = screen.getByText("Model Capabilities:").closest("section");
+
+  expect(section).not.toBeNull();
+
+  return section as HTMLElement;
+}
+
+function getSupportedParametersTable() {
+  const label = screen
+    .getAllByText("Supported Parameters")
+    .find((element) => element.tagName.toLowerCase() === "h2");
+  const section = label?.closest("section");
 
   expect(section).not.toBeNull();
 

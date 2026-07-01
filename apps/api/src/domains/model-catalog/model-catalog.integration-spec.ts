@@ -16,11 +16,26 @@ describe("Model catalog API", () => {
       permaslug: "anthropic/claude-sonnet-5-20260630",
       displayName: "Claude Sonnet 5",
       description: "Frontier Sonnet-class model.",
+      warningMessage: null,
       authorName: "Anthropic",
       authorIconUrl: "https://openrouter.ai/images/icons/Anthropic.svg",
       inputModalities: ["text", "image"],
       outputModalities: ["text"],
       supportedParameters: ["tools", "reasoning"],
+      supportedParameterDetails: [
+        {
+          key: "reasoning",
+          name: "Reasoning",
+          type: "object",
+          values: "Any",
+        },
+        {
+          key: "tools",
+          name: "Tools",
+          type: "array",
+          values: "Any",
+        },
+      ],
       capabilities: [
         {
           key: "text.reasoning",
@@ -44,11 +59,20 @@ describe("Model catalog API", () => {
       permaslug: "openai/gpt-4o-mini-20260701",
       displayName: "GPT-4o Mini",
       description: "Small multimodal model.",
+      warningMessage: null,
       authorName: "OpenAI",
       authorIconUrl: null,
       inputModalities: ["text"],
       outputModalities: ["text"],
       supportedParameters: ["response_format"],
+      supportedParameterDetails: [
+        {
+          key: "response_format",
+          name: "Response Format",
+          type: "object",
+          values: "Any",
+        },
+      ],
       capabilities: [
         {
           key: "text.structured-outputs",
@@ -67,11 +91,20 @@ describe("Model catalog API", () => {
       permaslug: "xiaomi/mi-vision-pro-20260620",
       displayName: "Mi Vision Pro",
       description: "Image model.",
+      warningMessage: null,
       authorName: "Xiaomi",
       authorIconUrl: "https://openrouter.ai/images/icons/Xiaomi.svg",
       inputModalities: ["text", "image"],
       outputModalities: ["image"],
       supportedParameters: ["reasoning"],
+      supportedParameterDetails: [
+        {
+          key: "reasoning",
+          name: "Reasoning",
+          type: "object",
+          values: "Any",
+        },
+      ],
       capabilities: [
         {
           key: "image.text-to-image",
@@ -90,17 +123,31 @@ describe("Model catalog API", () => {
     async listModels() {
       return models;
     },
-    async getModelCapabilities(model) {
+    async getModelEndpointMetadata(model) {
       return model.permaslug === "anthropic/claude-sonnet-5-20260630"
-        ? [
-            ...model.capabilities,
-            {
-              key: "text.web-search",
-              label: "Web Search",
-              outputModality: "text",
-            },
-          ]
-        : model.capabilities;
+        ? {
+            capabilities: [
+              ...model.capabilities,
+              {
+                key: "text.web-search",
+                label: "Web Search",
+                outputModality: "text",
+              },
+            ],
+            supportedParameterDetails: [
+              ...model.supportedParameterDetails,
+              {
+                key: "web_search_options",
+                name: "Web Search Options",
+                type: "object",
+                values: "Any",
+              },
+            ],
+          }
+        : {
+            capabilities: model.capabilities,
+            supportedParameterDetails: model.supportedParameterDetails,
+          };
     },
   };
 
@@ -165,6 +212,15 @@ describe("Model catalog API", () => {
             key: "text.web-search",
             label: "Web Search",
             outputModality: "text",
+          },
+        ],
+        supportedParameterDetails: [
+          ...models[0].supportedParameterDetails,
+          {
+            key: "web_search_options",
+            name: "Web Search Options",
+            type: "object",
+            values: "Any",
           },
         ],
       });
