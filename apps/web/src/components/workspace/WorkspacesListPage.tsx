@@ -143,10 +143,10 @@ function WorkspaceOrgSection({ membership }: { membership: Membership }) {
 
 function WorkspaceCard({ workspace }: { workspace: Workspace }) {
   return (
-    <article className="group relative flex h-full flex-col rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary/30">
+    <article className="group relative flex h-full cursor-pointer flex-col rounded-lg border border-border bg-card p-5 transition-colors hover:border-primary/30">
       <a
         aria-label={workspace.name}
-        className="absolute inset-0 z-0 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+        className="absolute inset-0 z-20 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
         href={`/app/workspaces/${encodeURIComponent(workspace.id)}/overview`}
         onClick={() => {
           persistLastVisitedWorkspaceId(window.localStorage, workspace.id);
@@ -168,7 +168,7 @@ function WorkspaceCard({ workspace }: { workspace: Workspace }) {
 
       <div className="relative z-10 mt-auto flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground">
-          Workspace
+          Go to workspace
         </span>
         <MaterialIcon
           aria-hidden="true"

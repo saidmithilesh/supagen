@@ -58,6 +58,7 @@ describe(WorkspacesListPage.name, () => {
     expect(
       screen.getByRole("link", { name: "Growth Workspace" }),
     ).toHaveAttribute("href", "/app/workspaces/workspace_456/overview");
+    expect(screen.getAllByText("Go to workspace")).toHaveLength(2);
     expect(screen.getByText("Shared prompt templates.")).toBeInTheDocument();
   });
 
