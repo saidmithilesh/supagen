@@ -1,9 +1,24 @@
 import {
   mapOpenRouterCatalogModels,
+  mapOpenRouterModelBenchmarks,
   mapOpenRouterModelEndpointMetadata,
 } from "./openrouter-model-catalog.mapper";
 
 describe(mapOpenRouterCatalogModels.name, () => {
+  const emptyBenchmarks = {
+    artificialAnalysis: [],
+    designArena: {
+      eloBounds: {
+        max: null,
+        min: null,
+      },
+      records: [],
+    },
+    genericScores: {
+      lookbackDays: null,
+      scores: [],
+    },
+  };
   const mapSingleModel = (
     endpoint: Record<string, unknown>,
     overrides: Record<string, unknown> = {},
@@ -192,6 +207,10 @@ describe(mapOpenRouterCatalogModels.name, () => {
         releaseDate: "2026-06-30T18:11:23.921Z",
         inputPrice: "$2/M tokens",
         outputPrice: "$10/M tokens",
+        pricingCatalog: [],
+        benchmarks: emptyBenchmarks,
+        averageP50Throughput: null,
+        averageP50Latency: null,
         contextWindowSize: 900_000,
         maxOutputTokens: 65_536,
       },
@@ -336,6 +355,8 @@ describe(mapOpenRouterCatalogModels.name, () => {
         ],
       }),
     ).toEqual({
+      averageP50Latency: null,
+      averageP50Throughput: null,
       capabilities: [
         {
           key: "text.web-search",
@@ -343,6 +364,7 @@ describe(mapOpenRouterCatalogModels.name, () => {
           outputModality: "text",
         },
       ],
+      pricingCatalog: [],
       supportedParameterDetails: [
         {
           key: "web_search_options",
@@ -352,6 +374,332 @@ describe(mapOpenRouterCatalogModels.name, () => {
         },
       ],
     });
+  });
+
+  it("normalizes benchmark data from all OpenRouter benchmark sources", () => {
+    expect(
+      mapOpenRouterModelBenchmarks({
+        genericScores: {
+          data: {
+            lookback_days: 32,
+            scores: [
+              {
+                name: "MMLU Pro",
+                score: 0.8123,
+                rank: 4,
+              },
+            ],
+          },
+        },
+        artificialAnalysis: {
+          data: [
+            {
+              aa_slug: "claude-sonnet-5",
+              aa_name: "Claude Sonnet 5",
+              benchmark_data: {
+                model_type: "llm",
+                evaluations: {
+                  artificial_analysis_intelligence_index: 53.4,
+                  gpqa: 0.911,
+                  ifbench: null,
+                },
+              },
+              percentiles: {
+                intelligence_percentile: 93,
+                coding_percentile: 91,
+              },
+            },
+            {
+              aa_slug: "kling-3-0-pro",
+              aa_name: "Kling 3.0 1080p (Pro)",
+              benchmark_data: {
+                model_type: "text-to-video",
+                elo: 1251,
+                rank: 4,
+                ci95: "-9/9",
+                appearances: 5824,
+                categories: [
+                  {
+                    subject_matter_category: "Physics",
+                    elo: 1269,
+                    ci95: "-13/13",
+                    appearances: 2595,
+                  },
+                  {
+                    format_category: "Moving camera",
+                    elo: 1275,
+                    ci95: "-23/23",
+                    appearances: 1033,
+                  },
+                ],
+              },
+            },
+          ],
+        },
+        designArena: {
+          data: {
+            eloBounds: {
+              min: 529,
+              max: 1503,
+            },
+            records: [
+              {
+                display_name: "FLUX.2 [pro]",
+                category: "imageediting",
+                elo: 1157,
+                win_rate: 49.9,
+                avg_generation_time_ms: 22380,
+                elo_percentile: 38,
+                total_tournaments: 30148,
+              },
+            ],
+          },
+        },
+      }),
+    ).toEqual({
+      genericScores: {
+        lookbackDays: 32,
+        scores: [
+          {
+            name: "MMLU Pro",
+            rank: 4,
+            value: "0.812",
+          },
+        ],
+      },
+      artificialAnalysis: [
+        {
+          slug: "claude-sonnet-5",
+          name: "Claude Sonnet 5",
+          modelType: "llm",
+          elo: null,
+          rank: null,
+          ci95: null,
+          appearances: null,
+          percentiles: [
+            {
+              name: "Intelligence",
+              value: 93,
+            },
+            {
+              name: "Coding",
+              value: 91,
+            },
+          ],
+          evaluations: [
+            {
+              name: "Artificial Analysis Intelligence Index",
+              rank: null,
+              value: "53.4",
+            },
+            {
+              name: "Gpqa",
+              rank: null,
+              value: "0.911",
+            },
+          ],
+          categories: [],
+        },
+        {
+          slug: "kling-3-0-pro",
+          name: "Kling 3.0 1080p (Pro)",
+          modelType: "text-to-video",
+          elo: 1251,
+          rank: 4,
+          ci95: "-9/9",
+          appearances: 5824,
+          percentiles: [],
+          evaluations: [],
+          categories: [
+            {
+              name: "Physics",
+              categoryType: "Subject",
+              elo: 1269,
+              ci95: "-13/13",
+              appearances: 2595,
+            },
+            {
+              name: "Moving camera",
+              categoryType: "Format",
+              elo: 1275,
+              ci95: "-23/23",
+              appearances: 1033,
+            },
+          ],
+        },
+      ],
+      designArena: {
+        eloBounds: {
+          min: 529,
+          max: 1503,
+        },
+        records: [
+          {
+            name: "FLUX.2 [pro]",
+            category: "imageediting",
+            elo: 1157,
+            eloPercentile: 38,
+            winRate: 49.9,
+            averageGenerationTimeMs: 22380,
+            totalTournaments: 30148,
+          },
+        ],
+      },
+    });
+  });
+
+  it("averages non-zero endpoint p50 throughput and latency values", () => {
+    const model = mapSingleModel({
+      supported_parameters: [],
+    });
+
+    expect(
+      mapOpenRouterModelEndpointMetadata(model, {
+        data: [
+          {
+            stats: {
+              p50_throughput: 50,
+              p50_latency: 3000,
+            },
+          },
+          {
+            stats: {
+              p50_throughput: 0,
+              p50_latency: null,
+            },
+          },
+          {
+            routing_heuristics: {
+              p50_throughput: 70,
+              p50_latency: 5000,
+            },
+          },
+        ],
+      }),
+    ).toMatchObject({
+      averageP50Throughput: 60,
+      averageP50Latency: 4000,
+    });
+  });
+
+  it("maps provider endpoint display pricing into tiered pricing catalog rows", () => {
+    const model = mapSingleModel({
+      supported_parameters: [],
+    });
+
+    expect(
+      mapOpenRouterModelEndpointMetadata(model, {
+        data: [
+          {
+            provider_name: "Anthropic",
+            provider_slug: "anthropic",
+            provider_info: {
+              displayName: "Anthropic Direct",
+            },
+            pricing: {
+              display_pricing: [
+                {
+                  sku_label: "Input Price",
+                  price: "0.000005",
+                  displayMultiplier: 1_000_000,
+                  unitLabel: "/M tokens",
+                  tiers: [
+                    { sku_label: "<= 200K context", price: "0.000005" },
+                    { sku_label: "> 200K context", price: "0.00001" },
+                  ],
+                },
+                {
+                  sku_label: "Output Price",
+                  price: "0.00003",
+                  displayMultiplier: 1_000_000,
+                  unitLabel: "/M tokens",
+                },
+              ],
+            },
+          },
+        ],
+      }).pricingCatalog,
+    ).toEqual([
+      {
+        providerName: "Anthropic Direct",
+        providerSlug: "anthropic",
+        rows: [
+          {
+            skuLabel: "Input Price",
+            price: "$5",
+            unitLabel: "/M tokens",
+            condition: "<= 200K context",
+            source: "display_pricing",
+          },
+          {
+            skuLabel: "Input Price",
+            price: "$10",
+            unitLabel: "/M tokens",
+            condition: "> 200K context",
+            source: "display_pricing",
+          },
+          {
+            skuLabel: "Output Price",
+            price: "$30",
+            unitLabel: "/M tokens",
+            condition: null,
+            source: "display_pricing",
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("falls back to raw token pricing when an endpoint has no display pricing", () => {
+    const model = mapSingleModel({
+      supported_parameters: [],
+    });
+
+    expect(
+      mapOpenRouterModelEndpointMetadata(model, {
+        data: [
+          {
+            provider_info: {
+              displayName: "Fallback Provider",
+              slug: "fallback",
+            },
+            pricing: {
+              prompt: "0.000001",
+              completion: "0.000002",
+              input_cache_read: "0.0000001",
+            },
+          },
+        ],
+      }).pricingCatalog,
+    ).toEqual([
+      {
+        providerName: "Fallback Provider",
+        providerSlug: "fallback",
+        rows: [
+          {
+            skuLabel: "Input Price",
+            price: "$1",
+            unitLabel: "/M tokens",
+            condition: null,
+            source: "raw_token_pricing",
+          },
+          {
+            skuLabel: "Output Price",
+            price: "$2",
+            unitLabel: "/M tokens",
+            condition: null,
+            source: "raw_token_pricing",
+          },
+          {
+            skuLabel: "Cache Read",
+            price: "$0.1",
+            unitLabel: "/M tokens",
+            condition: null,
+            source: "raw_token_pricing",
+          },
+        ],
+      },
+    ]);
   });
 
   it("unifies supported parameter values across model endpoints", () => {
@@ -642,6 +990,10 @@ describe(mapOpenRouterCatalogModels.name, () => {
         releaseDate: null,
         inputPrice: null,
         outputPrice: null,
+        pricingCatalog: [],
+        benchmarks: emptyBenchmarks,
+        averageP50Throughput: null,
+        averageP50Latency: null,
         contextWindowSize: 1_000_000,
         maxOutputTokens: null,
       },

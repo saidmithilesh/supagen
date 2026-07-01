@@ -20,14 +20,11 @@ import {
   ModelCatalogModelNotFoundError,
   type ModelCatalogModel,
 } from "../api/model-catalog";
-import { PriceValue } from "../components/model-catalog/ModelCatalogDisplay";
 import {
   formatContextWindow,
   formatModalityName,
   formatReleaseDate,
   getAuthorInitials,
-  getPrimaryOutputModality,
-  normalizeModalityKey,
 } from "../components/model-catalog/ModelCatalogDisplay.utils";
 import { HomepageNav } from "../components/marketing/HomepageNav";
 
@@ -109,9 +106,6 @@ export function ModelDetailsPage({ modelRef }: { modelRef: string }) {
 }
 
 function ModelDetails({ model }: { model: ModelCatalogModel }) {
-  const primaryOutputModality = getPrimaryOutputModality(
-    model.outputModalities,
-  );
   const hasContextWindow = hasValidContextWindow(model.contextWindowSize);
 
   return (
@@ -125,7 +119,7 @@ function ModelDetails({ model }: { model: ModelCatalogModel }) {
               authorIconUrl={model.authorIconUrl}
               authorName={model.authorName}
             />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-medium text-muted-foreground">
                   {model.authorName?.trim() || "Unknown"}
@@ -136,7 +130,10 @@ function ModelDetails({ model }: { model: ModelCatalogModel }) {
                   </span>
                 ) : null}
               </div>
-              <ModelDisplayNameHeading displayName={model.displayName} />
+              <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+                <ModelDisplayNameHeading displayName={model.displayName} />
+                <ModelPerformanceChips model={model} />
+              </div>
             </div>
           </div>
 
@@ -160,12 +157,9 @@ function ModelDetails({ model }: { model: ModelCatalogModel }) {
         </div>
       </section>
 
+      <ModelDetailedPricing model={model} />
       <ModelParametersTable model={model} />
-
-      <ModelModalityProfile
-        model={model}
-        primaryOutputModality={primaryOutputModality}
-      />
+      <ModelBenchmarksSection model={model} />
     </article>
   );
 }
@@ -185,6 +179,40 @@ function ModelDisplayNameHeading({ displayName }: { displayName: string }) {
         </span>
       ) : null}
     </h1>
+  );
+}
+
+function ModelPerformanceChips({ model }: { model: ModelCatalogModel }) {
+  const chips = [
+    model.averageP50Throughput && model.averageP50Throughput > 0
+      ? {
+          key: "throughput",
+          label: `Avg throughput ${formatThroughput(model.averageP50Throughput)}`,
+        }
+      : null,
+    model.averageP50Latency && model.averageP50Latency > 0
+      ? {
+          key: "latency",
+          label: `Avg latency ${formatLatency(model.averageP50Latency)}`,
+        }
+      : null,
+  ].filter((chip): chip is { key: string; label: string } => chip !== null);
+
+  if (chips.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex shrink-0 flex-wrap justify-end gap-1.5 pt-1">
+      {chips.map((chip) => (
+        <span
+          className="inline-flex items-center rounded-md border border-border bg-muted px-2 py-1 text-xs font-medium text-muted-foreground"
+          key={chip.key}
+        >
+          {chip.label}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -232,11 +260,18 @@ function ModelParametersTable({ model }: { model: ModelCatalogModel }) {
   }
 
   return (
-    <section>
-      <h2 className="mb-3 font-heading text-[20px] leading-7 font-semibold tracking-normal">
-        Supported Parameters
-      </h2>
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
+    <details className="group rounded-lg border border-border bg-card">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden">
+        <h2 className="font-heading text-[20px] leading-7 font-semibold tracking-normal">
+          Supported Parameters
+        </h2>
+        <MaterialIcon
+          aria-hidden="true"
+          className="text-muted-foreground transition-transform group-open:rotate-180"
+          name="expand_more"
+        />
+      </summary>
+      <div className="border-t border-border">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[44rem] border-collapse text-left text-sm">
             <thead className="border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground uppercase">
@@ -277,7 +312,167 @@ function ModelParametersTable({ model }: { model: ModelCatalogModel }) {
           </table>
         </div>
       </div>
+    </details>
+  );
+}
+
+function ModelDetailedPricing({ model }: { model: ModelCatalogModel }) {
+  const pricingGroups = getDetailedPricingSkuGroups(model);
+
+  if (pricingGroups.length === 0) {
+    return null;
+  }
+
+  return (
+    <details className="group rounded-lg border border-border bg-card">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden">
+        <h2 className="font-heading text-[20px] leading-7 font-semibold tracking-normal">
+          Detailed Pricing
+        </h2>
+        <MaterialIcon
+          aria-hidden="true"
+          className="text-muted-foreground transition-transform group-open:rotate-180"
+          name="expand_more"
+        />
+      </summary>
+      <div className="border-t border-border">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[52rem] border-collapse text-left text-sm">
+            <thead className="border-b border-border bg-muted/40 text-xs font-medium text-muted-foreground uppercase">
+              <tr>
+                <th className="w-[18%] px-3 py-3 font-medium whitespace-nowrap">
+                  SKU
+                </th>
+                <th className="w-[44%] px-2 py-3 font-medium whitespace-nowrap">
+                  Provider
+                </th>
+                <th className="w-[18%] px-2 py-3 font-medium whitespace-nowrap">
+                  Price
+                </th>
+                <th className="px-3 py-3 font-medium whitespace-nowrap">
+                  Conditions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {pricingGroups.flatMap((group) =>
+                group.offerings.map((offering, offeringIndex) => (
+                  <tr
+                    className="border-b border-border last:border-b-0 hover:bg-muted/30"
+                    key={`${group.skuLabel}-${offering.price}-${offering.unitLabel}-${offering.condition ?? "base"}-${offeringIndex}`}
+                  >
+                    {offeringIndex === 0 ? (
+                      <td
+                        className="border-r border-border bg-muted/15 px-3 py-3 align-middle font-medium"
+                        rowSpan={group.offerings.length}
+                      >
+                        {group.skuLabel}
+                      </td>
+                    ) : null}
+                    <td className="px-2 py-3">
+                      <div className="flex min-w-0 flex-wrap gap-1.5">
+                        {offering.providers.map((provider) => (
+                          <span
+                            className="rounded-md border border-border bg-muted px-2 py-1 text-xs font-medium text-muted-foreground"
+                            key={provider}
+                          >
+                            {provider}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 font-medium tabular-nums">
+                      {formatDetailedPrice(offering)}
+                    </td>
+                    <td className="px-3 py-3 text-muted-foreground">
+                      {offering.condition ?? "Base price"}
+                    </td>
+                  </tr>
+                )),
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function ModelBenchmarksSection({ model }: { model: ModelCatalogModel }) {
+  const benchmarks = getModelBenchmarks(model);
+  const benchmarkGroups = getBenchmarkDisplayGroups(benchmarks);
+
+  if (benchmarkGroups.length === 0) {
+    return null;
+  }
+
+  return (
+    <details className="group rounded-lg border border-border bg-card">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden">
+        <h2 className="font-heading text-[20px] leading-7 font-semibold tracking-normal">
+          Benchmarks
+        </h2>
+        <MaterialIcon
+          aria-hidden="true"
+          className="text-muted-foreground transition-transform group-open:rotate-180"
+          name="expand_more"
+        />
+      </summary>
+      <div className="flex flex-col gap-5 border-t border-border p-4">
+        {benchmarkGroups.map((group) => (
+          <BenchmarkSourceGroup key={group.title} title={group.title}>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {group.items.map((item) => (
+                <BenchmarkCard item={item} key={item.key} />
+              ))}
+            </div>
+          </BenchmarkSourceGroup>
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function BenchmarkSourceGroup({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title: string;
+}) {
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-baseline gap-2">
+        <h3 className="text-xs font-medium text-muted-foreground uppercase">
+          {title}
+        </h3>
+      </div>
+      {children}
     </section>
+  );
+}
+
+function BenchmarkCard({ item }: { item: BenchmarkDisplayItem }) {
+  return (
+    <article className="flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-background p-4">
+      <h4 className="min-w-0 truncate text-sm leading-5 font-semibold">
+        {item.name}
+      </h4>
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <p className="min-w-0 truncate text-muted-foreground">
+          Score:{" "}
+          <span className="font-semibold text-foreground tabular-nums">
+            {item.score}
+          </span>
+        </p>
+        <p className="min-w-0 truncate text-muted-foreground">
+          Percentile:{" "}
+          <span className="font-semibold text-foreground tabular-nums">
+            {item.percentile}
+          </span>
+        </p>
+      </div>
+    </article>
   );
 }
 
@@ -304,6 +499,300 @@ function ModelCapabilitiesRow({ model }: { model: ModelCatalogModel }) {
       </div>
     </section>
   );
+}
+
+function getDetailedPricingSkuGroups(model: ModelCatalogModel) {
+  const groups = new Map<
+    string,
+    {
+      skuLabel: string;
+      offerings: Array<{
+        condition: string | null;
+        price: string;
+        providers: string[];
+        unitLabel: string;
+      }>;
+    }
+  >();
+
+  for (const group of model.pricingCatalog) {
+    const provider = getPricingProviderLabel(group);
+
+    for (const row of group.rows) {
+      const existing = groups.get(row.skuLabel);
+
+      if (existing) {
+        addPricingOfferingProvider(existing.offerings, row, provider);
+        continue;
+      }
+
+      const offerings: Array<{
+        condition: string | null;
+        price: string;
+        providers: string[];
+        unitLabel: string;
+      }> = [];
+      addPricingOfferingProvider(offerings, row, provider);
+      groups.set(row.skuLabel, {
+        offerings,
+        skuLabel: row.skuLabel,
+      });
+    }
+  }
+
+  return [...groups.values()];
+}
+
+function formatDetailedPrice(input: { price: string; unitLabel: string }) {
+  return input.unitLabel ? `${input.price}${input.unitLabel}` : input.price;
+}
+
+function formatThroughput(value: number) {
+  return `${formatMetricNumber(value)} tok/s`;
+}
+
+function formatLatency(value: number) {
+  return value >= 1000
+    ? `${formatMetricNumber(value / 1000)}s`
+    : `${formatMetricNumber(value)}ms`;
+}
+
+function formatBenchmarkNumber(value: number) {
+  return value.toLocaleString("en-US", {
+    maximumFractionDigits: value > 0 && value < 10 ? 1 : 0,
+    minimumFractionDigits: 0,
+  });
+}
+
+function formatOrdinal(value: number) {
+  const roundedValue = Math.round(value);
+  const mod100 = roundedValue % 100;
+
+  if (mod100 >= 11 && mod100 <= 13) {
+    return `${roundedValue}th`;
+  }
+
+  switch (roundedValue % 10) {
+    case 1:
+      return `${roundedValue}st`;
+    case 2:
+      return `${roundedValue}nd`;
+    case 3:
+      return `${roundedValue}rd`;
+    default:
+      return `${roundedValue}th`;
+  }
+}
+
+function formatMetricNumber(value: number) {
+  return value.toLocaleString("en-US", {
+    maximumFractionDigits: value < 10 ? 1 : 0,
+    minimumFractionDigits: 0,
+  });
+}
+
+function getModelBenchmarks(model: ModelCatalogModel) {
+  return model.benchmarks ?? EMPTY_MODEL_BENCHMARKS;
+}
+
+function getBenchmarkDisplayGroups(
+  benchmarks: ModelCatalogModel["benchmarks"],
+): BenchmarkDisplayGroup[] {
+  return [
+    {
+      title: "Benchmark Scores",
+      items: benchmarks.genericScores.scores.map((score) => ({
+        key: `generic-${score.name}`,
+        name: formatBenchmarkDisplayName(score.name),
+        score: score.value,
+        percentile: "-",
+      })),
+    },
+    {
+      title: "Artificial Analysis",
+      items: benchmarks.artificialAnalysis.flatMap((benchmark) => {
+        const headlineItems: BenchmarkDisplayItem[] = [];
+        const primaryPercentile = benchmark.percentiles[0];
+
+        if (benchmark.elo !== null) {
+          headlineItems.push({
+            key: `aa-${benchmark.slug ?? benchmark.name}-overall`,
+            name: formatBenchmarkDisplayName(benchmark.name),
+            score: formatBenchmarkNumber(benchmark.elo),
+            percentile: primaryPercentile
+              ? formatOrdinal(primaryPercentile.value)
+              : "-",
+          });
+        }
+
+        return [
+          ...headlineItems,
+          ...benchmark.evaluations.map((score) => ({
+            key: `aa-${benchmark.slug ?? benchmark.name}-evaluation-${score.name}`,
+            name: formatBenchmarkDisplayName(score.name),
+            score: score.value,
+            percentile: formatMatchedBenchmarkPercentile(
+              score.name,
+              benchmark.percentiles,
+            ),
+          })),
+          ...benchmark.categories.map((category) => ({
+            key: `aa-${benchmark.slug ?? benchmark.name}-category-${category.categoryType}-${category.name}`,
+            name: `${category.categoryType}: ${formatBenchmarkDisplayName(category.name)}`,
+            score:
+              category.elo !== null ? formatBenchmarkNumber(category.elo) : "-",
+            percentile: "-",
+          })),
+        ];
+      }),
+    },
+    {
+      title: "Design Arena",
+      items: benchmarks.designArena.records.map((record) => ({
+        key: `design-arena-${record.name}-${record.category ?? "overall"}`,
+        name: formatBenchmarkDisplayName(record.category ?? record.name),
+        score: record.elo !== null ? formatBenchmarkNumber(record.elo) : "-",
+        percentile:
+          record.eloPercentile !== null
+            ? formatOrdinal(record.eloPercentile)
+            : "-",
+      })),
+    },
+  ]
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => item.percentile !== "-"),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
+type BenchmarkDisplayGroup = {
+  title: string;
+  items: BenchmarkDisplayItem[];
+};
+
+type BenchmarkDisplayItem = {
+  key: string;
+  name: string;
+  percentile: string;
+  score: string;
+};
+
+function formatMatchedBenchmarkPercentile(
+  scoreName: string,
+  percentiles: ModelCatalogModel["benchmarks"]["artificialAnalysis"][number]["percentiles"],
+) {
+  const normalizedScoreName = scoreName.toLowerCase();
+  const matchedPercentile = percentiles.find((percentile) =>
+    normalizedScoreName.includes(percentile.name.toLowerCase()),
+  );
+
+  return matchedPercentile ? formatOrdinal(matchedPercentile.value) : "-";
+}
+
+function formatBenchmarkDisplayName(value: string) {
+  const normalizedValue = value.trim().toLowerCase();
+  const displayName = BENCHMARK_DISPLAY_NAMES.get(normalizedValue);
+
+  if (displayName) {
+    return displayName;
+  }
+
+  const spaced = value
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!spaced) {
+    return "Benchmark";
+  }
+
+  return spaced.split(" ").map(formatBenchmarkDisplayWord).join(" ");
+}
+
+function formatBenchmarkDisplayWord(word: string) {
+  const normalized = word.toLowerCase();
+  const acronym = BENCHMARK_DISPLAY_ACRONYMS.get(normalized);
+
+  if (acronym) {
+    return acronym;
+  }
+
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+const BENCHMARK_DISPLAY_NAMES = new Map([
+  ["graphicdesign", "Graphic Design"],
+  ["imageediting", "Image Editing"],
+]);
+
+const BENCHMARK_DISPLAY_ACRONYMS = new Map([
+  ["aa", "AA"],
+  ["ai", "AI"],
+  ["elo", "ELO"],
+  ["gpqa", "GPQA"],
+  ["hle", "HLE"],
+  ["ifbench", "IFBench"],
+  ["lcr", "LCR"],
+  ["mmlu", "MMLU"],
+  ["scicode", "SciCode"],
+  ["ui", "UI"],
+  ["ux", "UX"],
+]);
+
+const EMPTY_MODEL_BENCHMARKS: ModelCatalogModel["benchmarks"] = {
+  artificialAnalysis: [],
+  designArena: {
+    eloBounds: {
+      max: null,
+      min: null,
+    },
+    records: [],
+  },
+  genericScores: {
+    lookbackDays: null,
+    scores: [],
+  },
+};
+
+function addPricingOfferingProvider(
+  offerings: Array<{
+    condition: string | null;
+    price: string;
+    providers: string[];
+    unitLabel: string;
+  }>,
+  row: ModelCatalogModel["pricingCatalog"][number]["rows"][number],
+  provider: string,
+) {
+  const existingOffering = offerings.find(
+    (offering) =>
+      offering.price === row.price &&
+      offering.unitLabel === row.unitLabel &&
+      offering.condition === row.condition,
+  );
+
+  if (existingOffering) {
+    if (!existingOffering.providers.includes(provider)) {
+      existingOffering.providers.push(provider);
+    }
+
+    return;
+  }
+
+  offerings.push({
+    condition: row.condition,
+    price: row.price,
+    providers: [provider],
+    unitLabel: row.unitLabel,
+  });
+}
+
+function getPricingProviderLabel(
+  group: ModelCatalogModel["pricingCatalog"][number],
+) {
+  return group.providerName?.trim() || group.providerSlug?.trim() || "Provider";
 }
 
 function ModelDescriptionMarkdown({ description }: { description: string }) {
@@ -411,13 +900,19 @@ function ModelDisplayPricesCard({
   compact: boolean;
   model: ModelCatalogModel;
 }) {
-  const hasConditionalPrices = hasConditionalDisplayPrice(model);
-
   return (
     <section className={getModelSummaryCardClassName(compact)}>
-      <h2 className="text-xs font-medium text-muted-foreground uppercase">
-        Price
-      </h2>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <h2
+          aria-label="Price"
+          className="text-xs font-medium text-muted-foreground uppercase"
+        >
+          Price
+        </h2>
+        <span className="text-xs leading-5 text-muted-foreground normal-case">
+          (See below for detailed prices)
+        </span>
+      </div>
       <dl className="grid gap-2 text-sm font-medium">
         <div className="grid grid-cols-[20%_80%] gap-3">
           <dt className="text-muted-foreground">Input</dt>
@@ -432,11 +927,6 @@ function ModelDisplayPricesCard({
           </dd>
         </div>
       </dl>
-      {hasConditionalPrices ? (
-        <p className="text-xs leading-5 text-muted-foreground">
-          See below for detailed prices.
-        </p>
-      ) : null}
     </section>
   );
 }
@@ -456,164 +946,12 @@ function InlinePriceValue({ value }: { value: string | null }) {
   return value;
 }
 
-function ModelModalityProfile({
-  model,
-  primaryOutputModality,
-}: {
-  model: ModelCatalogModel;
-  primaryOutputModality: string;
-}) {
-  const profile = getModalityProfile(primaryOutputModality);
-
-  return (
-    <section className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)]">
-      <div
-        className={cn(
-          "flex min-h-72 flex-col justify-between gap-8 rounded-lg border bg-card p-5 sm:p-6",
-          profile.borderClassName,
-        )}
-      >
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase">
-                {profile.eyebrow}
-              </p>
-              <h2 className="mt-1 font-heading text-2xl leading-tight font-semibold tracking-normal">
-                {profile.title}
-              </h2>
-            </div>
-            <span
-              className={cn(
-                "inline-flex size-11 shrink-0 items-center justify-center rounded-lg border bg-background",
-                profile.iconClassName,
-              )}
-            >
-              <MaterialIcon aria-hidden="true" name={profile.icon} size={24} />
-            </span>
-          </div>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            {profile.description}
-          </p>
-        </div>
-
-        <dl className="grid gap-3 sm:grid-cols-3">
-          <ModelProfileMetric label="Primary Output">
-            {formatModalityName(primaryOutputModality)}
-          </ModelProfileMetric>
-          <ModelProfileMetric label="Inputs">
-            {formatModalityList(model.inputModalities)}
-          </ModelProfileMetric>
-          <ModelProfileMetric label="Parameters">
-            {formatParameterCount(model.supportedParameters)}
-          </ModelProfileMetric>
-        </dl>
-      </div>
-
-      <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
-        <h2 className="font-heading text-base leading-6 font-semibold tracking-normal">
-          Catalog Signals
-        </h2>
-        <dl className="mt-5 flex flex-col divide-y divide-border">
-          <CatalogSignal label="Supported Parameters">
-            <ParameterList parameters={model.supportedParameters} />
-          </CatalogSignal>
-          <CatalogSignal label="Context Window">
-            <span className="tabular-nums">
-              {formatContextWindow(model.contextWindowSize)}
-            </span>
-          </CatalogSignal>
-          <CatalogSignal label="Pricing">
-            <span className="flex flex-col gap-1">
-              <span>
-                Input <PriceValue value={model.inputPrice} />
-              </span>
-              <span>
-                Output <PriceValue value={model.outputPrice} />
-              </span>
-            </span>
-          </CatalogSignal>
-        </dl>
-      </div>
-    </section>
-  );
-}
-
-function ModelProfileMetric({
-  children,
-  label,
-}: {
-  children: ReactNode;
-  label: string;
-}) {
-  return (
-    <div className="rounded-lg border border-border/70 bg-background/70 p-3">
-      <dt className="text-xs font-medium text-muted-foreground uppercase">
-        {label}
-      </dt>
-      <dd className="mt-2 text-sm font-medium">{children}</dd>
-    </div>
-  );
-}
-
-function CatalogSignal({
-  children,
-  label,
-}: {
-  children: ReactNode;
-  label: string;
-}) {
-  return (
-    <div className="grid gap-2 py-4 first:pt-0 last:pb-0 sm:grid-cols-[9rem_minmax(0,1fr)]">
-      <dt className="text-xs font-medium text-muted-foreground uppercase">
-        {label}
-      </dt>
-      <dd className="text-sm font-medium">{children}</dd>
-    </div>
-  );
-}
-
-function ParameterList({ parameters }: { parameters: string[] }) {
-  if (parameters.length === 0) {
-    return <span>-</span>;
-  }
-
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {parameters.map((parameter) => (
-        <span
-          className="rounded-md border border-border bg-background px-2 py-1 text-xs"
-          key={parameter}
-        >
-          {formatParameterName(parameter)}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 function formatModalityList(modalities: string[]) {
   if (modalities.length === 0) {
     return "-";
   }
 
   return modalities.map(formatModalityName).join(", ");
-}
-
-function formatParameterCount(parameters: string[]) {
-  return parameters.length === 0
-    ? "None listed"
-    : `${parameters.length} ${parameters.length === 1 ? "parameter" : "parameters"}`;
-}
-
-function formatParameterName(parameter: string) {
-  const normalized = parameter.trim().replace(/[_-]+/g, " ");
-
-  if (!normalized) {
-    return "Unknown";
-  }
-
-  return normalized.replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 function getDisplayNameParts(displayName: string) {
@@ -642,92 +980,9 @@ function getDisplayNameParts(displayName: string) {
     : { name: displayName, parenthesized: null };
 }
 
-function hasConditionalDisplayPrice(model: ModelCatalogModel) {
-  return [model.inputPrice, model.outputPrice].some((price) =>
-    price?.includes("*"),
-  );
-}
-
 function hasValidContextWindow(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
-
-function getModalityProfile(primaryOutputModality: string): ModalityProfile {
-  switch (normalizeModalityKey(primaryOutputModality)) {
-    case "image":
-      return {
-        borderClassName: "border-fuchsia-200 dark:border-fuchsia-950",
-        description:
-          "Cataloged for image output, with input and pricing signals separated so visual generation models can be compared against text-first models.",
-        eyebrow: "Image output",
-        icon: "image",
-        iconClassName: "text-fuchsia-500",
-        title: "Image generation model",
-      };
-    case "audio":
-    case "speech":
-    case "transcription":
-      return {
-        borderClassName: "border-amber-200 dark:border-amber-950",
-        description:
-          "Cataloged for audio-oriented output, including speech and transcription variants when providers expose them through the same catalog surface.",
-        eyebrow: "Audio output",
-        icon: "graphic_eq",
-        iconClassName: "text-amber-500",
-        title: "Audio generation model",
-      };
-    case "video":
-      return {
-        borderClassName: "border-rose-200 dark:border-rose-950",
-        description:
-          "Cataloged for video output, with generation pricing and input modality support kept alongside the rest of the model record.",
-        eyebrow: "Video output",
-        icon: "movie",
-        iconClassName: "text-rose-500",
-        title: "Video generation model",
-      };
-    case "embedding":
-    case "embeddings":
-      return {
-        borderClassName: "border-emerald-200 dark:border-emerald-950",
-        description:
-          "Cataloged for vector output, with context and parameter support surfaced for retrieval and ranking workflows.",
-        eyebrow: "Vector output",
-        icon: "hub",
-        iconClassName: "text-emerald-500",
-        title: "Embedding model",
-      };
-    case "rerank":
-      return {
-        borderClassName: "border-violet-200 dark:border-violet-950",
-        description:
-          "Cataloged for ranking output, with supported parameters shown as first-class comparison signals.",
-        eyebrow: "Ranking output",
-        icon: "sort",
-        iconClassName: "text-violet-500",
-        title: "Reranking model",
-      };
-    default:
-      return {
-        borderClassName: "border-sky-200 dark:border-sky-950",
-        description:
-          "Cataloged for text output, with context, pricing and parameter support grouped for quick comparison across language models.",
-        eyebrow: "Text output",
-        icon: "article",
-        iconClassName: "text-sky-500",
-        title: "Text generation model",
-      };
-  }
-}
-
-type ModalityProfile = {
-  borderClassName: string;
-  description: string;
-  eyebrow: string;
-  icon: string;
-  iconClassName: string;
-  title: string;
-};
 
 function AuthorAvatar({
   authorIconUrl,

@@ -138,7 +138,7 @@ describe(ModelsCatalogPage.name, () => {
       ),
     );
 
-    renderWithQueryClient(<ModelsCatalogPage />);
+    const { container } = renderWithQueryClient(<ModelsCatalogPage />);
 
     const nav = screen.getByRole("navigation");
     expect(within(nav).getByRole("link", { name: "Supagen" })).toHaveAttribute(
@@ -171,6 +171,10 @@ describe(ModelsCatalogPage.name, () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Filters" })).toBeVisible();
+    const pageRoot = container.firstElementChild;
+    expect(pageRoot).not.toHaveClass("h-svh");
+    expect(pageRoot).not.toHaveClass("overflow-hidden");
+    expect(getModelsListRegion()).not.toHaveClass("overflow-y-auto");
     expect(
       within(getFilterSection("Input Modalities")).getByRole("checkbox", {
         name: "Image",
@@ -549,6 +553,14 @@ function getFilterSection(label: string) {
   expect(section).not.toBeNull();
 
   return section as HTMLElement;
+}
+
+function getModelsListRegion() {
+  const region = getAuthorSection("Anthropic").parentElement?.parentElement;
+
+  expect(region).not.toBeNull();
+
+  return region as HTMLElement;
 }
 
 function modelFixture(

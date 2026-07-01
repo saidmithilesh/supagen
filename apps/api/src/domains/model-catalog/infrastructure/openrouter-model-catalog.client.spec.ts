@@ -2,6 +2,21 @@ import { ModelCatalogSourceUnavailableError } from "../application/model-catalog
 import type { ModelCatalogModel } from "../domain/model-catalog-model";
 import { OpenRouterModelCatalogClient } from "./openrouter-model-catalog.client";
 
+const emptyBenchmarks = {
+  artificialAnalysis: [],
+  designArena: {
+    eloBounds: {
+      max: null,
+      min: null,
+    },
+    records: [],
+  },
+  genericScores: {
+    lookbackDays: null,
+    scores: [],
+  },
+};
+
 describe(OpenRouterModelCatalogClient.name, () => {
   const originalFetch = globalThis.fetch;
 
@@ -18,7 +33,11 @@ describe(OpenRouterModelCatalogClient.name, () => {
     const client = new OpenRouterModelCatalogClient();
 
     await expect(client.getModelEndpointMetadata(model)).resolves.toEqual({
+      averageP50Latency: model.averageP50Latency,
+      averageP50Throughput: model.averageP50Throughput,
+      benchmarks: emptyBenchmarks,
       capabilities: model.capabilities,
+      pricingCatalog: model.pricingCatalog,
       supportedParameterDetails: model.supportedParameterDetails,
     });
   });
@@ -49,6 +68,10 @@ function createModel(
     outputModalities: ["text"],
     outputPrice: null,
     permaslug: "anthropic/claude-5-fable-20260609",
+    pricingCatalog: [],
+    benchmarks: emptyBenchmarks,
+    averageP50Throughput: null,
+    averageP50Latency: null,
     releaseDate: null,
     slug: "anthropic/claude-fable-5",
     supportedParameterDetails: [],

@@ -103,11 +103,11 @@ export function ModelsCatalogPage() {
   const activeFilterCount = countSelectedFilters(selectedFilters);
 
   return (
-    <div className="homepage-root flex h-svh flex-col overflow-hidden bg-background text-foreground">
+    <div className="homepage-root min-h-svh bg-background text-foreground">
       <HomepageNav />
 
-      <main className="min-h-0 flex-1 pt-16">
-        <section className="mx-auto flex h-full w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <main className="pt-16">
+        <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
           <header className="flex flex-col gap-1">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <h1 className="font-heading text-3xl leading-tight font-semibold tracking-normal">
@@ -121,7 +121,7 @@ export function ModelsCatalogPage() {
             </p>
           </header>
 
-          <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
+          <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
             <ModelCatalogFiltersPanel
               activeFilterCount={activeFilterCount}
               filterOptions={filterOptions}
@@ -129,7 +129,7 @@ export function ModelsCatalogPage() {
               selectedFilters={selectedFilters}
             />
 
-            <div className="min-h-0 overflow-y-auto pr-1">
+            <div className="min-w-0">
               {modelsQuery.isLoading ? (
                 <ModelCatalogStatus
                   icon="progress_activity"
@@ -175,7 +175,7 @@ function ModelCatalogFiltersPanel({
   selectedFilters: SelectedModelCatalogFilters;
 }) {
   return (
-    <aside className="min-h-0 overflow-y-auto rounded-lg border border-border bg-card p-4 max-lg:max-h-72">
+    <aside className="rounded-lg border border-border bg-card p-4 max-lg:max-h-72 max-lg:overflow-y-auto lg:sticky lg:top-24 lg:max-h-[calc(100svh-7rem)] lg:overflow-y-auto">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="font-heading text-base leading-6 font-semibold tracking-normal">
           Filters

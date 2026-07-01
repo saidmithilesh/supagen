@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -6,6 +6,21 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ModelDetailsPage } from "./models_.$author.$model";
 
 describe(ModelDetailsPage.name, () => {
+  const emptyBenchmarks = {
+    artificialAnalysis: [],
+    designArena: {
+      eloBounds: {
+        max: null,
+        min: null,
+      },
+      records: [],
+    },
+    genericScores: {
+      lookbackDays: null,
+      scores: [],
+    },
+  };
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -66,8 +81,106 @@ describe(ModelDetailsPage.name, () => {
           releaseDate: "2026-05-01T10:00:00.000Z",
           inputPrice: "$2/M tokens",
           outputPrice: "$10/M tokens*",
+          pricingCatalog: [
+            {
+              providerName: "Anthropic",
+              providerSlug: "anthropic",
+              rows: [
+                {
+                  skuLabel: "Input Price",
+                  price: "$2",
+                  unitLabel: "/M tokens",
+                  condition: null,
+                  source: "display_pricing",
+                },
+                {
+                  skuLabel: "Output Price",
+                  price: "$10",
+                  unitLabel: "/M tokens",
+                  condition: "<= 200K context",
+                  source: "display_pricing",
+                },
+                {
+                  skuLabel: "Output Price",
+                  price: "$15",
+                  unitLabel: "/M tokens",
+                  condition: "> 200K context",
+                  source: "display_pricing",
+                },
+              ],
+            },
+            {
+              providerName: "Amazon Bedrock",
+              providerSlug: "bedrock",
+              rows: [
+                {
+                  skuLabel: "Output Price",
+                  price: "$15",
+                  unitLabel: "/M tokens",
+                  condition: "> 200K context",
+                  source: "display_pricing",
+                },
+              ],
+            },
+          ],
+          benchmarks: {
+            genericScores: {
+              lookbackDays: 32,
+              scores: [
+                {
+                  name: "MMLU Pro",
+                  value: "0.812",
+                  rank: 4,
+                },
+              ],
+            },
+            artificialAnalysis: [
+              {
+                slug: "claude-sonnet-5",
+                name: "Claude Sonnet 5",
+                modelType: "llm",
+                elo: null,
+                rank: null,
+                ci95: null,
+                appearances: null,
+                percentiles: [
+                  {
+                    name: "Intelligence",
+                    value: 93,
+                  },
+                ],
+                evaluations: [
+                  {
+                    name: "Artificial Analysis Intelligence Index",
+                    value: "53.4",
+                    rank: null,
+                  },
+                ],
+                categories: [],
+              },
+            ],
+            designArena: {
+              eloBounds: {
+                min: 529,
+                max: 1503,
+              },
+              records: [
+                {
+                  name: "FLUX.2 [pro]",
+                  category: "imageediting",
+                  elo: 1157,
+                  eloPercentile: 38,
+                  winRate: 49.9,
+                  averageGenerationTimeMs: 22380,
+                  totalTournaments: 30148,
+                },
+              ],
+            },
+          },
           contextWindowSize: 1_000_000,
           maxOutputTokens: 65_536,
+          averageP50Throughput: 55,
+          averageP50Latency: 3104,
         }),
         { status: 200 },
       ),
@@ -78,9 +191,14 @@ describe(ModelDetailsPage.name, () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "Claude Sonnet 5" }),
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "Claude Sonnet 5",
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Anthropic")).toBeInTheDocument();
+    expect(screen.getByText("Avg throughput 55 tok/s")).toBeInTheDocument();
+    expect(screen.getByText("Avg latency 3.1s")).toBeInTheDocument();
+    expect(screen.getAllByText("Anthropic").length).toBeGreaterThan(0);
     expect(screen.getByText("Frontier", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("Sonnet-class").tagName).toBe("STRONG");
     expect(screen.getByRole("link", { name: "docs" })).toHaveAttribute(
@@ -109,24 +227,20 @@ describe(ModelDetailsPage.name, () => {
     expect(
       within(supportedModalities as HTMLElement).getByText("Text"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Price")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Price" })).toBeInTheDocument();
     expect(
-      screen.getByText("See below for detailed prices."),
+      screen.getByText("(See below for detailed prices)"),
     ).toBeInTheDocument();
 
-    const inputPrice = getFirstByLabelText("$2/M tokens");
-    expect(within(inputPrice).getByText("$2")).toBeInTheDocument();
-    expect(within(inputPrice).getByText("M tokens")).toBeInTheDocument();
-
-    const outputPrice = getFirstByLabelText("$10/M tokens*");
-    expect(within(outputPrice).getByText("$10")).toBeInTheDocument();
-    expect(within(outputPrice).getByText("M tokens*")).toBeInTheDocument();
+    const priceCard = getPriceCard();
+    expect(within(priceCard).getByText("$2/M tokens")).toBeInTheDocument();
+    expect(within(priceCard).getByText("$10/M tokens*")).toBeInTheDocument();
 
     expect(screen.getByText("May 01, 2026")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Context Window" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText("1M")).toHaveLength(2);
+    expect(screen.getByText("1M")).toBeInTheDocument();
     expect(screen.getByText("Max Output Tokens")).toBeInTheDocument();
     expect(screen.getByText("66K")).toBeInTheDocument();
     const capabilities = getModelCapabilities();
@@ -153,7 +267,23 @@ describe(ModelDetailsPage.name, () => {
     expect(
       within(capabilities).queryByText("Web Search"),
     ).not.toBeInTheDocument();
+    const detailedPricing = getDetailedPricing();
     const parameters = getSupportedParametersTable();
+    const benchmarks = getBenchmarks();
+    expect(
+      detailedPricing.compareDocumentPosition(parameters) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      parameters.compareDocumentPosition(benchmarks) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(detailedPricing).not.toHaveAttribute("open");
+    expect(parameters).not.toHaveAttribute("open");
+    expect(benchmarks).not.toHaveAttribute("open");
+    fireEvent.click(within(detailedPricing).getByText("Detailed Pricing"));
+    fireEvent.click(within(parameters).getByText("Supported Parameters"));
+    fireEvent.click(within(benchmarks).getByText("Benchmarks"));
     expect(
       within(parameters).getByRole("columnheader", {
         name: "Parameter Name",
@@ -176,15 +306,64 @@ describe(ModelDetailsPage.name, () => {
     expect(
       within(parameters).getByText("auto, none, required"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Text generation model")).toBeInTheDocument();
-    expect(screen.getByText("2 parameters")).toBeInTheDocument();
     expect(
-      within(getCatalogSignals()).getByText("Reasoning"),
+      within(detailedPricing).getByRole("columnheader", { name: "SKU" }),
     ).toBeInTheDocument();
-    expect(within(getCatalogSignals()).getByText("Tools")).toBeInTheDocument();
+    expect(
+      within(detailedPricing).getByRole("columnheader", { name: "Provider" }),
+    ).toBeInTheDocument();
+    expect(
+      within(detailedPricing).getByRole("columnheader", { name: "Price" }),
+    ).toBeInTheDocument();
+    expect(
+      within(detailedPricing).getByRole("columnheader", {
+        name: "Conditions",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(detailedPricing).queryByRole("columnheader", { name: "Unit" }),
+    ).not.toBeInTheDocument();
+    expect(within(detailedPricing).getAllByText("$15/M tokens")).toHaveLength(
+      1,
+    );
+    const [sharedTierRow] = within(detailedPricing)
+      .getAllByText("> 200K context")
+      .map((element) => element.closest("tr"));
+    expect(sharedTierRow).not.toBeNull();
+    expect(
+      within(sharedTierRow as HTMLElement).getByText("Anthropic"),
+    ).toBeInTheDocument();
+    expect(
+      within(sharedTierRow as HTMLElement).getByText("Amazon Bedrock"),
+    ).toBeInTheDocument();
+    expect(within(benchmarks).getAllByText(/Score:/).length).toBeGreaterThan(0);
+    expect(
+      within(benchmarks).getAllByText(/Percentile:/).length,
+    ).toBeGreaterThan(0);
+    expect(
+      within(benchmarks).getByText("Artificial Analysis"),
+    ).toBeInTheDocument();
+    expect(
+      within(benchmarks).getByText("Artificial Analysis Intelligence Index"),
+    ).toBeInTheDocument();
+    expect(within(benchmarks).getByText("93rd")).toBeInTheDocument();
+    expect(within(benchmarks).getByText("Design Arena")).toBeInTheDocument();
+    expect(within(benchmarks).getByText("Image Editing")).toBeInTheDocument();
+    expect(within(benchmarks).getByText("1,157")).toBeInTheDocument();
+    expect(within(benchmarks).getByText("38th")).toBeInTheDocument();
+    expect(
+      within(benchmarks).queryByText("Benchmark Scores"),
+    ).not.toBeInTheDocument();
+    expect(within(benchmarks).queryByText("MMLU Pro")).not.toBeInTheDocument();
+    expect(within(benchmarks).queryByText("22s")).not.toBeInTheDocument();
+    expect(
+      within(benchmarks).queryByText("Last 32 days"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Text generation model")).not.toBeInTheDocument();
+    expect(screen.queryByText("Catalog Signals")).not.toBeInTheDocument();
   });
 
-  it("uses the first non-text output modality for the detail profile", async () => {
+  it("renders multimodal capabilities without modality profile cards", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -221,6 +400,10 @@ describe(ModelDetailsPage.name, () => {
           releaseDate: "2026-06-20T00:00:00.000Z",
           inputPrice: "$0.20/M tokens",
           outputPrice: "$1/image",
+          pricingCatalog: [],
+          benchmarks: emptyBenchmarks,
+          averageP50Throughput: null,
+          averageP50Latency: null,
           contextWindowSize: 32_000,
           maxOutputTokens: null,
         }),
@@ -233,16 +416,19 @@ describe(ModelDetailsPage.name, () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "Image generation model" }),
+      await screen.findByRole("heading", { name: "Mi Vision Pro" }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Image generation model" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("Text generation model")).not.toBeInTheDocument();
+    expect(screen.queryByText("Catalog Signals")).not.toBeInTheDocument();
     const capabilities = getModelCapabilities();
     expect(within(capabilities).getByText("Text to Image")).toBeInTheDocument();
     expect(
       within(capabilities).getByText("Reference Images"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Primary Output")).toBeInTheDocument();
-    expect(screen.getByText("Image")).toBeInTheDocument();
+    expect(screen.getAllByText("Text, Image")).toHaveLength(2);
   });
 
   it("omits the context window card when the model has no valid context window", async () => {
@@ -264,6 +450,10 @@ describe(ModelDetailsPage.name, () => {
           releaseDate: null,
           inputPrice: null,
           outputPrice: null,
+          pricingCatalog: [],
+          benchmarks: emptyBenchmarks,
+          averageP50Throughput: null,
+          averageP50Latency: null,
           contextWindowSize: 0,
           maxOutputTokens: null,
         }),
@@ -303,6 +493,10 @@ describe(ModelDetailsPage.name, () => {
           releaseDate: null,
           inputPrice: null,
           outputPrice: null,
+          pricingCatalog: [],
+          benchmarks: emptyBenchmarks,
+          averageP50Throughput: null,
+          averageP50Latency: null,
           contextWindowSize: 0,
           maxOutputTokens: null,
         }),
@@ -348,16 +542,18 @@ describe(ModelDetailsPage.name, () => {
   });
 });
 
-function getFirstByLabelText(label: string) {
-  const [element] = screen.getAllByLabelText(label);
-
-  expect(element).toBeDefined();
-
-  return element as HTMLElement;
-}
-
 function getModelCapabilities() {
   const section = screen.getByText("Model Capabilities:").closest("section");
+
+  expect(section).not.toBeNull();
+
+  return section as HTMLElement;
+}
+
+function getPriceCard() {
+  const section = screen
+    .getByRole("heading", { name: "Price" })
+    .closest("section");
 
   expect(section).not.toBeNull();
 
@@ -368,19 +564,31 @@ function getSupportedParametersTable() {
   const label = screen
     .getAllByText("Supported Parameters")
     .find((element) => element.tagName.toLowerCase() === "h2");
-  const section = label?.closest("section");
+  const section = label?.closest("details");
 
   expect(section).not.toBeNull();
 
   return section as HTMLElement;
 }
 
-function getCatalogSignals() {
-  const panel = screen.getByText("Catalog Signals").closest("div");
+function getDetailedPricing() {
+  const section = screen
+    .getByRole("heading", { name: "Detailed Pricing" })
+    .closest("details");
 
-  expect(panel).not.toBeNull();
+  expect(section).not.toBeNull();
 
-  return panel as HTMLElement;
+  return section as HTMLElement;
+}
+
+function getBenchmarks() {
+  const section = screen
+    .getByRole("heading", { name: "Benchmarks" })
+    .closest("details");
+
+  expect(section).not.toBeNull();
+
+  return section as HTMLElement;
 }
 
 function renderWithQueryClient(children: ReactNode) {

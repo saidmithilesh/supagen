@@ -1,7 +1,14 @@
 import type {
+  ModelCatalogArtificialAnalysisBenchmark,
+  ModelCatalogArtificialAnalysisCategory,
+  ModelCatalogBenchmarkScore,
+  ModelCatalogBenchmarks,
   ModelCatalogCapability,
+  ModelCatalogDesignArenaBenchmark,
   ModelCatalogModel,
   ModelCatalogParameter,
+  ModelCatalogPricingGroup,
+  ModelCatalogPricingRow,
 } from "../domain/model-catalog-model";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai";
@@ -126,12 +133,22 @@ export function mapOpenRouterCatalogModels(
 export function mapOpenRouterModelEndpointMetadata(
   model: ModelCatalogModel,
   payload: unknown,
-): Pick<ModelCatalogModel, "capabilities" | "supportedParameterDetails"> {
+): Pick<
+  ModelCatalogModel,
+  | "averageP50Latency"
+  | "averageP50Throughput"
+  | "capabilities"
+  | "pricingCatalog"
+  | "supportedParameterDetails"
+> {
   const endpoints = getEndpointRecords(payload);
 
   if (endpoints.length === 0) {
     return {
+      averageP50Latency: model.averageP50Latency,
+      averageP50Throughput: model.averageP50Throughput,
       capabilities: model.capabilities,
+      pricingCatalog: model.pricingCatalog,
       supportedParameterDetails: model.supportedParameterDetails,
     };
   }
@@ -146,8 +163,25 @@ export function mapOpenRouterModelEndpointMetadata(
   };
 
   return {
+    averageP50Latency: getAverageEndpointMetric(endpoints, "p50_latency"),
+    averageP50Throughput: getAverageEndpointMetric(endpoints, "p50_throughput"),
     capabilities: getModelCapabilities(input),
+    pricingCatalog: getPricingCatalog(endpoints),
     supportedParameterDetails: getModelParameters(input.records),
+  };
+}
+
+export function mapOpenRouterModelBenchmarks(payloads: {
+  artificialAnalysis: unknown;
+  designArena: unknown;
+  genericScores: unknown;
+}): ModelCatalogBenchmarks {
+  return {
+    artificialAnalysis: getArtificialAnalysisBenchmarks(
+      payloads.artificialAnalysis,
+    ),
+    designArena: getDesignArenaBenchmarks(payloads.designArena),
+    genericScores: getGenericBenchmarkScores(payloads.genericScores),
   };
 }
 
@@ -213,6 +247,10 @@ function mapOpenRouterCatalogModel(
       OUTPUT_DISPLAY_LABELS,
       "completion",
     ),
+    pricingCatalog: [],
+    benchmarks: getEmptyBenchmarks(),
+    averageP50Latency: null,
+    averageP50Throughput: null,
     contextWindowSize:
       asNumber(endpointRecord.context_length) ??
       asNumber(record.context_length),
@@ -235,6 +273,255 @@ function getModelCapabilities(input: {
     label,
     outputModality,
   }));
+}
+
+function getEmptyBenchmarks(): ModelCatalogBenchmarks {
+  return {
+    artificialAnalysis: [],
+    designArena: {
+      eloBounds: {
+        max: null,
+        min: null,
+      },
+      records: [],
+    },
+    genericScores: {
+      lookbackDays: null,
+      scores: [],
+    },
+  };
+}
+
+function getGenericBenchmarkScores(payload: unknown) {
+  const data = asRecord(asRecord(payload)?.data);
+  const scores = Array.isArray(data?.scores) ? data.scores : [];
+
+  return {
+    lookbackDays: asFiniteNumber(data?.lookback_days),
+    scores: scores
+      .map(getGenericBenchmarkScore)
+      .filter((score): score is ModelCatalogBenchmarkScore => score !== null),
+  };
+}
+
+function getGenericBenchmarkScore(value: unknown) {
+  const record = asRecord(value);
+
+  if (!record) {
+    return null;
+  }
+
+  const name =
+    asString(record.name) ??
+    asString(record.label) ??
+    asString(record.benchmark) ??
+    asString(record.key);
+  const rawValue =
+    record.score ?? record.value ?? record.percentile ?? record.accuracy;
+  const formattedValue = formatBenchmarkValue(rawValue);
+
+  if (!name || !formattedValue) {
+    return null;
+  }
+
+  return {
+    name: formatBenchmarkLabel(name),
+    value: formattedValue,
+    rank: asFiniteNumber(record.rank),
+  };
+}
+
+function getArtificialAnalysisBenchmarks(
+  payload: unknown,
+): ModelCatalogArtificialAnalysisBenchmark[] {
+  const records = asRecord(payload)?.data;
+
+  if (!Array.isArray(records)) {
+    return [];
+  }
+
+  return records
+    .map(getArtificialAnalysisBenchmark)
+    .filter(
+      (benchmark): benchmark is ModelCatalogArtificialAnalysisBenchmark =>
+        benchmark !== null,
+    );
+}
+
+function getArtificialAnalysisBenchmark(value: unknown) {
+  const record = asRecord(value);
+  const benchmarkData = asRecord(record?.benchmark_data);
+  const name = asString(record?.aa_name) ?? asString(record?.aa_slug);
+
+  if (!record || !benchmarkData || !name) {
+    return null;
+  }
+
+  return {
+    slug: asString(record.aa_slug),
+    name,
+    modelType: asString(benchmarkData.model_type),
+    elo: asFiniteNumber(benchmarkData.elo),
+    rank: asFiniteNumber(benchmarkData.rank),
+    ci95: asString(benchmarkData.ci95),
+    appearances: asFiniteNumber(benchmarkData.appearances),
+    percentiles: getArtificialAnalysisPercentiles(record.percentiles),
+    evaluations: getArtificialAnalysisEvaluations(benchmarkData.evaluations),
+    categories: getArtificialAnalysisCategories(benchmarkData.categories),
+  };
+}
+
+function getArtificialAnalysisPercentiles(value: unknown) {
+  const record = asRecord(value);
+
+  if (!record) {
+    return [];
+  }
+
+  return Object.entries(record)
+    .map(([key, rawValue]) => {
+      const percentile = asFiniteNumber(rawValue);
+
+      return percentile === null
+        ? null
+        : {
+            name: formatBenchmarkLabel(key.replace(/_percentile$/, "")),
+            value: percentile,
+          };
+    })
+    .filter(
+      (percentile): percentile is { name: string; value: number } =>
+        percentile !== null,
+    );
+}
+
+function getArtificialAnalysisEvaluations(
+  value: unknown,
+): ModelCatalogBenchmarkScore[] {
+  const record = asRecord(value);
+
+  if (!record) {
+    return [];
+  }
+
+  return Object.entries(record)
+    .map(([key, rawValue]) => {
+      const formattedValue = formatBenchmarkValue(rawValue);
+
+      if (!formattedValue) {
+        return null;
+      }
+
+      const score: ModelCatalogBenchmarkScore = {
+        name: formatBenchmarkLabel(key),
+        rank: null,
+        value: formattedValue,
+      };
+
+      return score;
+    })
+    .filter((score): score is ModelCatalogBenchmarkScore => score !== null);
+}
+
+function getArtificialAnalysisCategories(
+  value: unknown,
+): ModelCatalogArtificialAnalysisCategory[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => {
+      const record = asRecord(entry);
+
+      if (!record) {
+        return null;
+      }
+
+      const styleCategory = asString(record.style_category);
+      const subjectMatterCategory = asString(record.subject_matter_category);
+      const formatCategory = asString(record.format_category);
+      const categoryName =
+        styleCategory ?? subjectMatterCategory ?? formatCategory;
+
+      if (!categoryName) {
+        return null;
+      }
+
+      return {
+        name: categoryName,
+        categoryType: styleCategory
+          ? "Style"
+          : subjectMatterCategory
+            ? "Subject"
+            : "Format",
+        elo: asFiniteNumber(record.elo),
+        ci95: asString(record.ci95),
+        appearances: asFiniteNumber(record.appearances),
+      };
+    })
+    .filter(
+      (category): category is ModelCatalogArtificialAnalysisCategory =>
+        category !== null,
+    );
+}
+
+function getDesignArenaBenchmarks(payload: unknown) {
+  const data = asRecord(asRecord(payload)?.data);
+  const records = Array.isArray(data?.records) ? data.records : [];
+  const eloBounds = asRecord(data?.eloBounds);
+
+  return {
+    eloBounds: {
+      max: asFiniteNumber(eloBounds?.max),
+      min: asFiniteNumber(eloBounds?.min),
+    },
+    records: records
+      .map(getDesignArenaBenchmark)
+      .filter(
+        (record): record is ModelCatalogDesignArenaBenchmark => record !== null,
+      ),
+  };
+}
+
+function getDesignArenaBenchmark(value: unknown) {
+  const record = asRecord(value);
+  const name = asString(record?.display_name) ?? asString(record?.da_model_id);
+
+  if (!record || !name) {
+    return null;
+  }
+
+  return {
+    name,
+    category: asString(record.category),
+    elo: asFiniteNumber(record.elo),
+    eloPercentile: asFiniteNumber(record.elo_percentile),
+    winRate: asFiniteNumber(record.win_rate),
+    averageGenerationTimeMs: asFiniteNumber(record.avg_generation_time_ms),
+    totalTournaments: asFiniteNumber(record.total_tournaments),
+  };
+}
+
+function formatBenchmarkValue(value: unknown) {
+  if (typeof value === "string" && value.trim()) {
+    return value;
+  }
+
+  const number = asFiniteNumber(value);
+
+  if (number === null) {
+    return null;
+  }
+
+  return number.toLocaleString("en-US", {
+    maximumFractionDigits: number > 0 && number < 1 ? 3 : 1,
+    minimumFractionDigits: 0,
+  });
+}
+
+function formatBenchmarkLabel(value: string) {
+  return formatParameterName(value);
 }
 
 function getFeatureSupportedParameter(
@@ -1188,6 +1475,183 @@ function hasPricingLabel(endpoint: Record<string, unknown>, label: string) {
   );
 }
 
+function getPricingCatalog(
+  endpoints: Array<Record<string, unknown>>,
+): ModelCatalogPricingGroup[] {
+  return endpoints
+    .map((endpoint) => ({
+      providerName: getPricingProviderName(endpoint),
+      providerSlug: getPricingProviderSlug(endpoint),
+      rows: getPricingRows(endpoint),
+    }))
+    .filter((group) => group.rows.length > 0);
+}
+
+function getAverageEndpointMetric(
+  endpoints: Array<Record<string, unknown>>,
+  key: "p50_latency" | "p50_throughput",
+) {
+  const values = endpoints
+    .map((endpoint) => getEndpointMetric(endpoint, key))
+    .filter((value): value is number => value !== null && value > 0);
+
+  if (values.length === 0) {
+    return null;
+  }
+
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function getEndpointMetric(
+  endpoint: Record<string, unknown>,
+  key: "p50_latency" | "p50_throughput",
+) {
+  return (
+    asFiniteNumber(asRecord(endpoint.stats)?.[key]) ??
+    asFiniteNumber(asRecord(endpoint.routing_heuristics)?.[key])
+  );
+}
+
+function getPricingProviderName(endpoint: Record<string, unknown>) {
+  const providerInfo = asRecord(endpoint.provider_info);
+
+  return (
+    asString(providerInfo?.displayName) ??
+    asString(providerInfo?.display_name) ??
+    asString(providerInfo?.name) ??
+    asString(endpoint.provider_name) ??
+    asString(endpoint.provider)
+  );
+}
+
+function getPricingProviderSlug(endpoint: Record<string, unknown>) {
+  const providerInfo = asRecord(endpoint.provider_info);
+
+  return (
+    asString(endpoint.provider_slug) ??
+    asString(endpoint.provider) ??
+    asString(providerInfo?.slug) ??
+    asString(providerInfo?.id)
+  );
+}
+
+function getPricingRows(
+  endpoint: Record<string, unknown>,
+): ModelCatalogPricingRow[] {
+  const displayPricing = getDisplayPricing(endpoint);
+  const displayPricingRows = displayPricing
+    ? getDisplayPricingRows(displayPricing)
+    : [];
+
+  if (displayPricingRows.length > 0) {
+    return displayPricingRows;
+  }
+
+  return getRawTokenPricingRows(endpoint);
+}
+
+function getDisplayPricingRows(
+  displayPricing: unknown[],
+): ModelCatalogPricingRow[] {
+  return displayPricing.flatMap((entry) => {
+    const record = asRecord(entry);
+    const skuLabel = asString(record?.sku_label);
+
+    if (!record || !skuLabel) {
+      return [];
+    }
+
+    const tiers = Array.isArray(record.tiers)
+      ? record.tiers.filter(isRecord)
+      : [];
+
+    if (tiers.length > 0) {
+      return tiers.flatMap((tier) =>
+        getDisplayPricingRow(record, {
+          condition: asString(tier.sku_label),
+          price: tier.price,
+          unitLabel: tier.unitLabel,
+          displayMultiplier: tier.displayMultiplier,
+        }),
+      );
+    }
+
+    return getDisplayPricingRow(record, {
+      condition: null,
+      price: record.price,
+      unitLabel: record.unitLabel,
+      displayMultiplier: record.displayMultiplier,
+    });
+  });
+}
+
+function getDisplayPricingRow(
+  record: Record<string, unknown>,
+  input: {
+    condition: string | null;
+    displayMultiplier: unknown;
+    price: unknown;
+    unitLabel: unknown;
+  },
+): ModelCatalogPricingRow[] {
+  const skuLabel = asString(record.sku_label);
+  const price = formatPriceValue(asPriceValue(input.price), {
+    displayMultiplier:
+      asFiniteNumber(input.displayMultiplier) ??
+      asFiniteNumber(record.displayMultiplier) ??
+      1,
+  });
+
+  if (!skuLabel || !price) {
+    return [];
+  }
+
+  return [
+    {
+      skuLabel,
+      price,
+      unitLabel: asString(input.unitLabel) ?? asString(record.unitLabel) ?? "",
+      condition: input.condition,
+      source: "display_pricing",
+    },
+  ];
+}
+
+function getRawTokenPricingRows(
+  endpoint: Record<string, unknown>,
+): ModelCatalogPricingRow[] {
+  const pricing = asRecord(endpoint.pricing);
+
+  if (!pricing) {
+    return [];
+  }
+
+  return [
+    getRawTokenPricingRow("Input Price", pricing.prompt),
+    getRawTokenPricingRow("Output Price", pricing.completion),
+    getRawTokenPricingRow("Cache Read", pricing.input_cache_read),
+  ].filter((row): row is ModelCatalogPricingRow => row !== null);
+}
+
+function getRawTokenPricingRow(
+  skuLabel: string,
+  rawPrice: unknown,
+): ModelCatalogPricingRow | null {
+  const price = formatPriceValue(asPriceValue(rawPrice), {
+    displayMultiplier: 1_000_000,
+  });
+
+  return price
+    ? {
+        skuLabel,
+        price,
+        unitLabel: "/M tokens",
+        condition: null,
+        source: "raw_token_pricing",
+      }
+    : null;
+}
+
 function getEndpointRecords(payload: unknown): Array<Record<string, unknown>> {
   const data = asRecord(payload)?.data;
 
@@ -1296,14 +1760,14 @@ function getDisplayPrice(
 }
 
 function getDisplayPricing(endpoint: Record<string, unknown>) {
-  if (Array.isArray(endpoint.display_pricing)) {
-    return endpoint.display_pricing;
-  }
-
   const pricing = asRecord(endpoint.pricing);
 
   if (Array.isArray(pricing?.display_pricing)) {
     return pricing.display_pricing;
+  }
+
+  if (Array.isArray(endpoint.display_pricing)) {
+    return endpoint.display_pricing;
   }
 
   return null;
@@ -1344,7 +1808,7 @@ function selectDisplayPrice(
 }
 
 function formatDisplayPrice(record: Record<string, unknown>) {
-  const formattedPrice = formatTokenPrice(asPriceValue(record.price), {
+  const formattedPrice = formatPriceWithUnit(asPriceValue(record.price), {
     displayMultiplier: asFiniteNumber(record.displayMultiplier) ?? 1,
     unitLabel: asString(record.unitLabel) ?? "",
   });
@@ -1360,6 +1824,22 @@ function formatTokenPrice(
   rawPrice: string | null,
   options: { displayMultiplier: number; unitLabel: string },
 ) {
+  return formatPriceWithUnit(rawPrice, options);
+}
+
+function formatPriceWithUnit(
+  rawPrice: string | null,
+  options: { displayMultiplier: number; unitLabel: string },
+) {
+  const price = formatPriceValue(rawPrice, options);
+
+  return price ? `${price}${options.unitLabel}` : null;
+}
+
+function formatPriceValue(
+  rawPrice: string | null,
+  options: { displayMultiplier: number },
+) {
   if (!rawPrice) {
     return null;
   }
@@ -1370,7 +1850,7 @@ function formatTokenPrice(
     return null;
   }
 
-  return `$${formatPriceAmount(amount)}${options.unitLabel}`;
+  return `$${formatPriceAmount(amount)}`;
 }
 
 function formatPriceAmount(amount: number) {

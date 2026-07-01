@@ -2,6 +2,20 @@ import { ListModelCatalogModelsUseCase } from "./list-model-catalog-models.use-c
 import type { ModelCatalogSource } from "./model-catalog-source";
 
 describe(ListModelCatalogModelsUseCase.name, () => {
+  const emptyBenchmarks = {
+    artificialAnalysis: [],
+    designArena: {
+      eloBounds: {
+        max: null,
+        min: null,
+      },
+      records: [],
+    },
+    genericScores: {
+      lookbackDays: null,
+      scores: [],
+    },
+  };
   const models = [
     {
       slug: "anthropic/claude-sonnet-5",
@@ -43,6 +57,10 @@ describe(ListModelCatalogModelsUseCase.name, () => {
       releaseDate: "2026-06-30T18:11:23.921Z",
       inputPrice: "$2/M tokens",
       outputPrice: "$10/M tokens",
+      pricingCatalog: [],
+      benchmarks: emptyBenchmarks,
+      averageP50Throughput: null,
+      averageP50Latency: null,
       contextWindowSize: 1_000_000,
       maxOutputTokens: 65_536,
     },
@@ -75,6 +93,10 @@ describe(ListModelCatalogModelsUseCase.name, () => {
       releaseDate: null,
       inputPrice: null,
       outputPrice: null,
+      pricingCatalog: [],
+      benchmarks: emptyBenchmarks,
+      averageP50Throughput: null,
+      averageP50Latency: null,
       contextWindowSize: 65_536,
       maxOutputTokens: 16_384,
     },
@@ -107,6 +129,10 @@ describe(ListModelCatalogModelsUseCase.name, () => {
       releaseDate: "2026-06-20T00:00:00.000Z",
       inputPrice: "$0.20/M tokens",
       outputPrice: "$1/image",
+      pricingCatalog: [],
+      benchmarks: emptyBenchmarks,
+      averageP50Throughput: null,
+      averageP50Latency: null,
       contextWindowSize: 32_000,
       maxOutputTokens: null,
     },
@@ -173,8 +199,27 @@ describe(ListModelCatalogModelsUseCase.name, () => {
         values: "Any",
       },
     ];
+    const pricingCatalog = [
+      {
+        providerName: "Anthropic",
+        providerSlug: "anthropic",
+        rows: [
+          {
+            skuLabel: "Input Price",
+            price: "$2",
+            unitLabel: "/M tokens",
+            condition: null,
+            source: "display_pricing" as const,
+          },
+        ],
+      },
+    ];
     source.getModelEndpointMetadata.mockResolvedValue({
+      averageP50Throughput: 55,
+      averageP50Latency: 3104,
+      benchmarks: emptyBenchmarks,
       capabilities: endpointCapabilities,
+      pricingCatalog,
       supportedParameterDetails,
     });
     const useCase = new ListModelCatalogModelsUseCase(source);
@@ -183,7 +228,11 @@ describe(ListModelCatalogModelsUseCase.name, () => {
       useCase.getModel("anthropic/claude-sonnet-5-20260630"),
     ).resolves.toMatchObject({
       permaslug: "anthropic/claude-sonnet-5-20260630",
+      averageP50Throughput: 55,
+      averageP50Latency: 3104,
+      benchmarks: emptyBenchmarks,
       capabilities: endpointCapabilities,
+      pricingCatalog,
       supportedParameterDetails,
     });
     expect(source.getModelEndpointMetadata).toHaveBeenCalledWith(models[0]);
@@ -219,7 +268,11 @@ describe(ListModelCatalogModelsUseCase.name, () => {
     return {
       listModels: jest.fn(async () => models),
       getModelEndpointMetadata: jest.fn(async (model) => ({
+        averageP50Throughput: model.averageP50Throughput,
+        averageP50Latency: model.averageP50Latency,
+        benchmarks: model.benchmarks,
         capabilities: model.capabilities,
+        pricingCatalog: model.pricingCatalog,
         supportedParameterDetails: model.supportedParameterDetails,
       })),
     };

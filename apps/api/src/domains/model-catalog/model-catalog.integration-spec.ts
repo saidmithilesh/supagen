@@ -10,6 +10,20 @@ import type { ModelCatalogSource } from "./application/model-catalog-source";
 describe("Model catalog API", () => {
   let app: INestApplication;
 
+  const emptyBenchmarks = {
+    artificialAnalysis: [],
+    designArena: {
+      eloBounds: {
+        max: null,
+        min: null,
+      },
+      records: [],
+    },
+    genericScores: {
+      lookbackDays: null,
+      scores: [],
+    },
+  };
   const models = [
     {
       slug: "anthropic/claude-sonnet-5",
@@ -51,6 +65,10 @@ describe("Model catalog API", () => {
       releaseDate: "2026-06-30T18:11:23.921Z",
       inputPrice: "$2/M tokens",
       outputPrice: "$10/M tokens",
+      pricingCatalog: [],
+      benchmarks: emptyBenchmarks,
+      averageP50Throughput: null,
+      averageP50Latency: null,
       contextWindowSize: 1_000_000,
       maxOutputTokens: 65_536,
     },
@@ -83,6 +101,10 @@ describe("Model catalog API", () => {
       releaseDate: null,
       inputPrice: null,
       outputPrice: null,
+      pricingCatalog: [],
+      benchmarks: emptyBenchmarks,
+      averageP50Throughput: null,
+      averageP50Latency: null,
       contextWindowSize: 65_536,
       maxOutputTokens: 16_384,
     },
@@ -115,6 +137,10 @@ describe("Model catalog API", () => {
       releaseDate: "2026-06-20T00:00:00.000Z",
       inputPrice: "$0.20/M tokens",
       outputPrice: "$1/image",
+      pricingCatalog: [],
+      benchmarks: emptyBenchmarks,
+      averageP50Throughput: null,
+      averageP50Latency: null,
       contextWindowSize: 32_000,
       maxOutputTokens: null,
     },
@@ -126,12 +152,30 @@ describe("Model catalog API", () => {
     async getModelEndpointMetadata(model) {
       return model.permaslug === "anthropic/claude-sonnet-5-20260630"
         ? {
+            averageP50Throughput: 55,
+            averageP50Latency: 3104,
+            benchmarks: emptyBenchmarks,
             capabilities: [
               ...model.capabilities,
               {
                 key: "text.web-search",
                 label: "Web Search",
                 outputModality: "text",
+              },
+            ],
+            pricingCatalog: [
+              {
+                providerName: "Anthropic",
+                providerSlug: "anthropic",
+                rows: [
+                  {
+                    skuLabel: "Input Price",
+                    price: "$2",
+                    unitLabel: "/M tokens",
+                    condition: null,
+                    source: "display_pricing",
+                  },
+                ],
               },
             ],
             supportedParameterDetails: [
@@ -145,7 +189,11 @@ describe("Model catalog API", () => {
             ],
           }
         : {
+            averageP50Throughput: model.averageP50Throughput,
+            averageP50Latency: model.averageP50Latency,
+            benchmarks: model.benchmarks,
             capabilities: model.capabilities,
+            pricingCatalog: model.pricingCatalog,
             supportedParameterDetails: model.supportedParameterDetails,
           };
     },
@@ -206,12 +254,30 @@ describe("Model catalog API", () => {
       .expect(200)
       .expect({
         ...models[0],
+        averageP50Throughput: 55,
+        averageP50Latency: 3104,
+        benchmarks: emptyBenchmarks,
         capabilities: [
           ...models[0].capabilities,
           {
             key: "text.web-search",
             label: "Web Search",
             outputModality: "text",
+          },
+        ],
+        pricingCatalog: [
+          {
+            providerName: "Anthropic",
+            providerSlug: "anthropic",
+            rows: [
+              {
+                skuLabel: "Input Price",
+                price: "$2",
+                unitLabel: "/M tokens",
+                condition: null,
+                source: "display_pricing",
+              },
+            ],
           },
         ],
         supportedParameterDetails: [

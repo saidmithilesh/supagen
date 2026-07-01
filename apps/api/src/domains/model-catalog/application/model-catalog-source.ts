@@ -5,6 +5,14 @@ export interface ModelCatalogSource {
   getModelEndpointMetadata(
     model: ModelCatalogModel,
   ): Promise<
-    Pick<ModelCatalogModel, "capabilities" | "supportedParameterDetails">
+    Pick<
+      ModelCatalogModel,
+      | "averageP50Latency"
+      | "averageP50Throughput"
+      | "benchmarks"
+      | "capabilities"
+      | "pricingCatalog"
+      | "supportedParameterDetails"
+    >
   >;
 }
