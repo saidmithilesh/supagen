@@ -350,8 +350,17 @@ function AuthorAvatar({
   authorName: string;
 }) {
   return (
-    <Avatar size="sm">
-      {authorIconUrl ? <AvatarImage alt="" src={authorIconUrl} /> : null}
+    <Avatar
+      className={
+        authorIconUrl
+          ? "bg-white after:border-0 after:mix-blend-normal dark:after:mix-blend-normal"
+          : undefined
+      }
+      size="sm"
+    >
+      {authorIconUrl ? (
+        <AvatarImage alt="" className="object-cover" src={authorIconUrl} />
+      ) : null}
       <AvatarFallback>{getAuthorInitials(authorName)}</AvatarFallback>
     </Avatar>
   );

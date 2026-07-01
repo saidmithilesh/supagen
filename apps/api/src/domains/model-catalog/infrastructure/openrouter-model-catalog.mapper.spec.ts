@@ -2,6 +2,7 @@ import {
   mapOpenRouterCatalogModels,
   mapOpenRouterModelBenchmarks,
   mapOpenRouterModelEndpointMetadata,
+  mapOpenRouterProviderLookup,
 } from "./openrouter-model-catalog.mapper";
 
 describe(mapOpenRouterCatalogModels.name, () => {
@@ -23,87 +24,111 @@ describe(mapOpenRouterCatalogModels.name, () => {
     endpoint: Record<string, unknown>,
     overrides: Record<string, unknown> = {},
   ) =>
-    mapOpenRouterCatalogModels({
-      data: [
-        {
-          slug: "provider/model",
-          permaslug: "provider/model-20260101",
-          short_name: "Provider Model",
-          input_modalities: ["text"],
-          output_modalities: ["text"],
-          endpoint,
-          ...overrides,
+    mapOpenRouterCatalogModels(
+      {
+        data: [
+          {
+            slug: "provider/model",
+            permaslug: "provider/model-20260101",
+            short_name: "Provider Model",
+            input_modalities: ["text"],
+            output_modalities: ["text"],
+            endpoint,
+            ...overrides,
+          },
+        ],
+      },
+      providers,
+    )[0];
+  const providers = mapOpenRouterProviderLookup({
+    data: [
+      {
+        slug: "anthropic",
+        displayName: "Anthropic",
+        icon: {
+          url: "/images/icons/Anthropic.svg",
         },
-      ],
-    })[0];
+      },
+      {
+        slug: "black-forest-labs",
+        displayName: "Black Forest Labs",
+        icon: {
+          url: "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://bfl.ai&size=256",
+        },
+      },
+    ],
+  });
 
   it("maps served OpenRouter models into the Supagen catalog shape", () => {
     expect(
-      mapOpenRouterCatalogModels({
-        data: [
-          {
-            slug: "anthropic/claude-sonnet-5",
-            permaslug: "anthropic/claude-sonnet-5-20260630",
-            short_name: "Claude Sonnet 5",
-            name: "Anthropic: Claude Sonnet 5",
-            author: "anthropic",
-            author_display_name: "Anthropic",
-            description: "Frontier Sonnet-class model.",
-            warning_message: "This model may be rate limited.",
-            created_at: "2026-06-30T18:11:23.921Z",
-            context_length: 1_000_000,
-            input_modalities: ["text", "image", null],
-            output_modalities: ["text"],
-            supports_reasoning: true,
-            endpoint: {
-              context_length: 900_000,
-              max_completion_tokens: 65_536,
+      mapOpenRouterCatalogModels(
+        {
+          data: [
+            {
+              slug: "anthropic/claude-sonnet-5",
+              permaslug: "anthropic/claude-sonnet-5-20260630",
+              short_name: "Claude Sonnet 5",
+              name: "Anthropic: Claude Sonnet 5",
+              author: "anthropic",
+              author_display_name: "Anthropic",
+              description: "Frontier Sonnet-class model.",
+              warning_message: "This model may be rate limited.",
+              created_at: "2026-06-30T18:11:23.921Z",
+              context_length: 1_000_000,
+              input_modalities: ["text", "image", null],
+              output_modalities: ["text"],
               supports_reasoning: true,
-              supports_tool_parameters: true,
-              supported_parameters: [
-                "max_tokens",
-                "stop",
-                "reasoning",
-                "include_reasoning",
-                "tools",
-                "tool_choice",
-                "structured_outputs",
-                "response_format",
-                "verbosity",
-                null,
-              ],
-              features: {
-                supports_native_web_search: true,
-                supports_tool_choice: {
-                  literal_none: true,
-                  literal_auto: true,
-                  literal_required: true,
-                  type_function: true,
+              endpoint: {
+                context_length: 900_000,
+                max_completion_tokens: 65_536,
+                supports_reasoning: true,
+                supports_tool_parameters: true,
+                supported_parameters: [
+                  "max_tokens",
+                  "stop",
+                  "reasoning",
+                  "include_reasoning",
+                  "tools",
+                  "tool_choice",
+                  "structured_outputs",
+                  "response_format",
+                  "verbosity",
+                  null,
+                ],
+                features: {
+                  supports_native_web_search: true,
+                  supports_tool_choice: {
+                    literal_none: true,
+                    literal_auto: true,
+                    literal_required: true,
+                    type_function: true,
+                  },
                 },
-              },
-              display_pricing: [
-                {
-                  sku_label: "Input Price",
-                  price: "2e-6",
-                  displayMultiplier: 1_000_000,
-                  unitLabel: "/M tokens",
-                },
-                {
-                  sku_label: "Output Price",
-                  price: "10e-6",
-                  displayMultiplier: 1_000_000,
-                  unitLabel: "/M tokens",
-                },
-              ],
-              provider_info: {
-                icon: {
-                  url: "/images/icons/Bedrock.svg",
+                display_pricing: [
+                  {
+                    sku_label: "Input Price",
+                    price: "2e-6",
+                    displayMultiplier: 1_000_000,
+                    unitLabel: "/M tokens",
+                  },
+                  {
+                    sku_label: "Output Price",
+                    price: "10e-6",
+                    displayMultiplier: 1_000_000,
+                    unitLabel: "/M tokens",
+                  },
+                ],
+                provider_info: {
+                  icon: {
+                    url: "/images/icons/Bedrock.svg",
+                  },
                 },
               },
             },
-          },
-        ],
-      }),
+          ],
+        },
+        providers,
+      ),
     ).toEqual([
       {
         slug: "anthropic/claude-sonnet-5",
@@ -955,24 +980,27 @@ describe(mapOpenRouterCatalogModels.name, () => {
 
   it("keeps warning-only catalog models without a serving endpoint", () => {
     expect(
-      mapOpenRouterCatalogModels({
-        data: [
-          {
-            slug: "anthropic/claude-fable-5",
-            permaslug: "anthropic/claude-5-fable-20260609",
-            short_name: "Claude Fable 5",
-            name: "Anthropic: Claude Fable 5",
-            author: "anthropic",
-            author_display_name: "Anthropic",
-            description: "Fable model.",
-            warning_message: "**Access may be interrupted.**",
-            context_length: 1_000_000,
-            input_modalities: ["text", "image", "file"],
-            output_modalities: ["text"],
-            endpoint: null,
-          },
-        ],
-      }),
+      mapOpenRouterCatalogModels(
+        {
+          data: [
+            {
+              slug: "anthropic/claude-fable-5",
+              permaslug: "anthropic/claude-5-fable-20260609",
+              short_name: "Claude Fable 5",
+              name: "Anthropic: Claude Fable 5",
+              author: "anthropic",
+              author_display_name: "Anthropic",
+              description: "Fable model.",
+              warning_message: "**Access may be interrupted.**",
+              context_length: 1_000_000,
+              input_modalities: ["text", "image", "file"],
+              output_modalities: ["text"],
+              endpoint: null,
+            },
+          ],
+        },
+        providers,
+      ),
     ).toEqual([
       {
         slug: "anthropic/claude-fable-5",
@@ -1024,6 +1052,32 @@ describe(mapOpenRouterCatalogModels.name, () => {
     });
   });
 
+  it("uses OpenRouter provider metadata and preserves model name prefixes for mismatched author slugs", () => {
+    expect(
+      mapOpenRouterCatalogModels(
+        {
+          data: [
+            {
+              slug: "black-forest-labs/flux.2-pro",
+              permaslug: "black-forest-labs/flux.2-pro",
+              name: "Black Forest Labs: FLUX.2 Pro",
+              author: "black-forest-labs",
+              input_modalities: ["text"],
+              output_modalities: ["image"],
+              endpoint: {},
+            },
+          ],
+        },
+        providers,
+      )[0],
+    ).toMatchObject({
+      authorName: "Black Forest Labs",
+      authorIconUrl:
+        "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://bfl.ai&size=256",
+      displayName: "Black Forest Labs: FLUX.2 Pro",
+    });
+  });
+
   it("keeps sensible author and model fallbacks when the model name has no usable separator", () => {
     expect(
       mapSingleModel(
@@ -1037,7 +1091,7 @@ describe(mapOpenRouterCatalogModels.name, () => {
       ),
     ).toMatchObject({
       authorName: "Anthropic",
-      displayName: "Claude 5",
+      displayName: "Claude Sonnet 5",
     });
   });
 

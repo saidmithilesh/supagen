@@ -7,10 +7,14 @@ import {
   mapOpenRouterCatalogModels,
   mapOpenRouterModelBenchmarks,
   mapOpenRouterModelEndpointMetadata,
+  mapOpenRouterProviderLookup,
+  type OpenRouterProviderLookup,
 } from "./openrouter-model-catalog.mapper";
 
 const OPENROUTER_CATALOG_MODELS_URL =
   "https://openrouter.ai/api/frontend/v1/catalog/models";
+const OPENROUTER_ALL_PROVIDERS_URL =
+  "https://openrouter.ai/api/frontend/all-providers";
 const OPENROUTER_MODEL_ENDPOINTS_URL =
   "https://openrouter.ai/api/frontend/v1/stats/endpoint";
 const OPENROUTER_BENCHMARK_SCORES_URL =
@@ -22,6 +26,8 @@ const OPENROUTER_DESIGN_ARENA_BENCHMARKS_URL =
 
 @Injectable()
 export class OpenRouterModelCatalogClient implements ModelCatalogSource {
+  private providersPromise: Promise<OpenRouterProviderLookup> | null = null;
+
   async listModels() {
     let response: Response;
 
@@ -44,7 +50,10 @@ export class OpenRouterModelCatalogClient implements ModelCatalogSource {
     }
 
     try {
-      return mapOpenRouterCatalogModels(await response.json());
+      return mapOpenRouterCatalogModels(
+        await response.json(),
+        await this.getProviders(),
+      );
     } catch (error) {
       throw new ModelCatalogSourceUnavailableError(
         getErrorMessage("OpenRouter catalog response was invalid.", error),
@@ -128,6 +137,46 @@ export class OpenRouterModelCatalogClient implements ModelCatalogSource {
       genericScores,
     });
   }
+
+  private getProviders() {
+    if (!this.providersPromise) {
+      this.providersPromise = fetchRequiredJson(
+        OPENROUTER_ALL_PROVIDERS_URL,
+        "OpenRouter providers request failed.",
+      )
+        .then(mapOpenRouterProviderLookup)
+        .catch((error: unknown) => {
+          this.providersPromise = null;
+          throw error;
+        });
+    }
+
+    return this.providersPromise;
+  }
+}
+
+async function fetchRequiredJson(url: string, errorPrefix: string) {
+  let response: Response;
+
+  try {
+    response = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+  } catch (error) {
+    throw new ModelCatalogSourceUnavailableError(
+      getErrorMessage(errorPrefix, error),
+    );
+  }
+
+  if (!response.ok) {
+    throw new ModelCatalogSourceUnavailableError(
+      `${errorPrefix} Status ${response.status}.`,
+    );
+  }
+
+  return response.json();
 }
 
 function getBenchmarkUrl(baseUrl: string, params: Record<string, string>) {

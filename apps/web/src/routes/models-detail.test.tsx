@@ -199,6 +199,13 @@ describe(ModelDetailsPage.name, () => {
     expect(screen.getByText("Avg throughput 55 tok/s")).toBeInTheDocument();
     expect(screen.getByText("Avg latency 3.1s")).toBeInTheDocument();
     expect(screen.getAllByText("Anthropic").length).toBeGreaterThan(0);
+    const authorLogoContainer = document.querySelector("[data-slot='avatar']");
+    expect(authorLogoContainer).toHaveClass(
+      "bg-white",
+      "rounded-full",
+      "after:border-0",
+    );
+    expect(authorLogoContainer).not.toHaveClass("border");
     expect(screen.getByText("Frontier", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("Sonnet-class").tagName).toBe("STRONG");
     expect(screen.getByRole("link", { name: "docs" })).toHaveAttribute(

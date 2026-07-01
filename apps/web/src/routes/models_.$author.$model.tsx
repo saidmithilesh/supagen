@@ -992,11 +992,18 @@ function AuthorAvatar({
   authorName: string | null;
 }) {
   return (
-    <Avatar className="size-14" style={{ height: "3.5rem", width: "3.5rem" }}>
+    <Avatar
+      className={
+        authorIconUrl
+          ? "size-14 bg-white after:border-0 after:mix-blend-normal dark:after:mix-blend-normal"
+          : "size-14"
+      }
+      style={{ height: "3.5rem", width: "3.5rem" }}
+    >
       {authorIconUrl ? (
         <AvatarImage
           alt=""
-          className="size-full max-h-full max-w-full object-contain"
+          className="size-full max-h-full max-w-full object-cover"
           src={authorIconUrl}
         />
       ) : null}

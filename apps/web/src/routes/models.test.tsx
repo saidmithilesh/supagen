@@ -167,7 +167,7 @@ describe(ModelsCatalogPage.name, () => {
     expect(await screen.findAllByRole("table")).toHaveLength(5);
     expect(
       screen.getByText(
-        "Choose from over 7 models across 5 providers in Supagen for agentic workflows, image generation, speech synthesis, video creation and more...",
+        "Choose from over 400 models across 50+ providers in Supagen for agentic workflows, image generation, speech synthesis, video creation and more...",
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Filters" })).toBeVisible();
@@ -199,6 +199,15 @@ describe(ModelsCatalogPage.name, () => {
       screen.queryByRole("columnheader", { name: "Provider" }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Anthropic" })).toBeVisible();
+    const anthropicLogoContainer = getAuthorSection("Anthropic").querySelector(
+      "[data-slot='avatar']",
+    );
+    expect(anthropicLogoContainer).toHaveClass(
+      "bg-white",
+      "rounded-full",
+      "after:border-0",
+    );
+    expect(anthropicLogoContainer).not.toHaveClass("border");
     expect(screen.getByRole("heading", { name: "OpenAI" })).toBeVisible();
     expect(screen.getAllByRole("heading", { name: "Xiaomi" })).toHaveLength(1);
     expect(screen.getByRole("heading", { name: "Mistral" })).toBeVisible();

@@ -113,14 +113,23 @@ const OUTPUT_DISPLAY_LABELS = [
   "Completion",
 ];
 
+export type OpenRouterProviderLookup = Map<string, OpenRouterProvider>;
+
+type OpenRouterProvider = {
+  displayName: string;
+  iconUrl: string | null;
+  slug: string;
+};
+
 export function mapOpenRouterCatalogModels(
   payload: unknown,
+  providers: OpenRouterProviderLookup = new Map(),
 ): ModelCatalogModel[] {
   const records = getCatalogRecords(payload);
   const models: ModelCatalogModel[] = [];
 
   for (const record of records) {
-    const model = mapOpenRouterCatalogModel(record);
+    const model = mapOpenRouterCatalogModel(record, providers);
 
     if (model) {
       models.push(model);
@@ -128,6 +137,29 @@ export function mapOpenRouterCatalogModels(
   }
 
   return models;
+}
+
+export function mapOpenRouterProviderLookup(
+  payload: unknown,
+): OpenRouterProviderLookup {
+  const providers = new Map<string, OpenRouterProvider>();
+
+  for (const record of getProviderRecords(payload)) {
+    const slug = asString(record.slug);
+
+    if (!slug) {
+      continue;
+    }
+
+    providers.set(normalizeProviderSlug(slug), {
+      displayName:
+        asString(record.displayName) ?? asString(record.name) ?? slug,
+      iconUrl: normalizeOpenRouterUrl(asString(asRecord(record.icon)?.url)),
+      slug,
+    });
+  }
+
+  return providers;
 }
 
 export function mapOpenRouterModelEndpointMetadata(
@@ -187,6 +219,7 @@ export function mapOpenRouterModelBenchmarks(payloads: {
 
 function mapOpenRouterCatalogModel(
   record: Record<string, unknown>,
+  providers: OpenRouterProviderLookup,
 ): ModelCatalogModel | null {
   const endpoint = asRecord(record.endpoint);
   const warningMessage = asString(record.warning_message);
@@ -206,13 +239,12 @@ function mapOpenRouterCatalogModel(
     return null;
   }
 
-  const modelNameParts = getModelNameParts(record);
   const endpointRecord = endpoint ?? {};
-  const authorName = getAuthorName(
-    record,
-    endpointRecord,
-    modelNameParts.authorName,
-  );
+  const authorSlug = asString(record.author);
+  const provider = authorSlug
+    ? providers.get(normalizeProviderSlug(authorSlug))
+    : undefined;
+  const authorName = getAuthorName(record, endpointRecord, provider);
   const supportedParameters = asStringArray(
     endpointRecord.supported_parameters,
   );
@@ -221,14 +253,18 @@ function mapOpenRouterCatalogModel(
     slug,
     permaslug,
     displayName:
-      modelNameParts.displayName ??
+      getModelDisplayName(record, authorSlug) ??
       asString(record.short_name) ??
-      asString(record.name) ??
       permaslug,
     description: asString(record.description),
     warningMessage,
     authorName,
-    authorIconUrl: getAuthorIconUrl(record, endpointRecord, authorName),
+    authorIconUrl: getAuthorIconUrl(
+      record,
+      endpointRecord,
+      authorName,
+      provider,
+    ),
     inputModalities: asStringArray(record.input_modalities),
     outputModalities: asStringArray(record.output_modalities),
     supportedParameters,
@@ -1668,15 +1704,25 @@ function getCatalogRecords(payload: unknown): Array<Record<string, unknown>> {
   return data.filter(isRecord);
 }
 
+function getProviderRecords(payload: unknown): Array<Record<string, unknown>> {
+  const data = asRecord(payload)?.data;
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.filter(isRecord);
+}
+
 function getAuthorName(
   record: Record<string, unknown>,
   endpoint: Record<string, unknown>,
-  parsedAuthorName: string | null,
+  provider: OpenRouterProvider | undefined,
 ) {
   const providerInfo = asRecord(endpoint.provider_info);
 
   return (
-    parsedAuthorName ??
+    provider?.displayName ??
     asString(record.author_display_name) ??
     asString(record.author) ??
     asString(providerInfo?.displayName) ??
@@ -1684,30 +1730,45 @@ function getAuthorName(
   );
 }
 
-function getModelNameParts(record: Record<string, unknown>) {
+function getModelDisplayName(
+  record: Record<string, unknown>,
+  authorSlug: string | null,
+) {
   const name = asString(record.name);
 
   if (!name) {
-    return { authorName: null, displayName: null };
+    return null;
   }
 
   const separatorIndex = name.indexOf(":");
 
   if (separatorIndex === -1) {
-    return { authorName: null, displayName: null };
+    return name;
   }
 
-  const authorName = name.slice(0, separatorIndex).trim() || null;
-  const displayName = name.slice(separatorIndex + 1).trim() || null;
+  const namePrefix = name.slice(0, separatorIndex).trim();
+  const modelName = name.slice(separatorIndex + 1).trim();
 
-  return { authorName, displayName };
+  if (!modelName) {
+    return name;
+  }
+
+  return authorSlug &&
+    namePrefix.toLowerCase() === authorSlug.trim().toLowerCase()
+    ? modelName
+    : name;
 }
 
 function getAuthorIconUrl(
   record: Record<string, unknown>,
   endpoint: Record<string, unknown>,
   authorName: string | null,
+  provider: OpenRouterProvider | undefined,
 ) {
+  if (provider?.iconUrl) {
+    return provider.iconUrl;
+  }
+
   const authorKeys = getAuthorKeys(record, authorName);
 
   for (const key of authorKeys) {
@@ -1725,6 +1786,10 @@ function getAuthorIconUrl(
   return endpointIconUrlMatchesAuthor(endpointIconUrl, authorKeys)
     ? endpointIconUrl
     : null;
+}
+
+function normalizeProviderSlug(value: string) {
+  return value.trim().toLowerCase();
 }
 
 function getAuthorKeys(

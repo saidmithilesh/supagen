@@ -25,6 +25,63 @@ describe(OpenRouterModelCatalogClient.name, () => {
     jest.restoreAllMocks();
   });
 
+  it("uses cached OpenRouter providers to map catalog author metadata", async () => {
+    const fetchMock = jest.fn(async (input: unknown) => {
+      const url = String(input);
+
+      if (url.includes("/all-providers")) {
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                slug: "anthropic",
+                displayName: "Anthropic Provider",
+                icon: {
+                  url: "/images/icons/Anthropic.svg",
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          data: [
+            {
+              slug: "anthropic/claude-sonnet-5",
+              permaslug: "anthropic/claude-sonnet-5-20260630",
+              name: "Anthropic: Claude Sonnet 5",
+              author: "anthropic",
+              input_modalities: ["text"],
+              output_modalities: ["text"],
+              endpoint: {},
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    });
+    globalThis.fetch = fetchMock;
+    const client = new OpenRouterModelCatalogClient();
+
+    await expect(client.listModels()).resolves.toMatchObject([
+      {
+        authorIconUrl: "https://openrouter.ai/images/icons/Anthropic.svg",
+        authorName: "Anthropic Provider",
+        displayName: "Claude Sonnet 5",
+      },
+    ]);
+    await client.listModels();
+
+    expect(
+      fetchMock.mock.calls.filter(([input]) =>
+        String(input).includes("/all-providers"),
+      ),
+    ).toHaveLength(1);
+  });
+
   it("falls back to catalog metadata when a warned model has no endpoints", async () => {
     const model = createModel({
       warningMessage: "**Access may be interrupted.**",
