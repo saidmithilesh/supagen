@@ -50,6 +50,7 @@ export class IamProfileRepository {
         organizationName: iamOrganizations.name,
         workspaceId: iamWorkspaces.id,
         workspaceName: iamWorkspaces.name,
+        workspaceDescription: iamWorkspaces.description,
       })
       .from(iamExternalIdentities)
       .innerJoin(iamUsers, eq(iamExternalIdentities.userId, iamUsers.id))
@@ -106,6 +107,7 @@ export class IamProfileRepository {
         membership.workspaces.push({
           id: row.workspaceId,
           name: row.workspaceName,
+          description: row.workspaceDescription,
         });
       }
 

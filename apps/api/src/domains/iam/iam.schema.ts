@@ -45,6 +45,7 @@ export const iamWorkspaces = pgTable("iam_workspaces", {
     .notNull()
     .references(() => iamOrganizations.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  description: text("description"),
 });
 
 export const iamMemberships = pgTable(

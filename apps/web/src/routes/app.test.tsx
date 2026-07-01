@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -12,7 +12,6 @@ const clerkMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@clerk/tanstack-react-start", () => ({
-  UserButton: () => <button type="button">User menu</button>,
   useAuth: clerkMocks.useAuth,
   useUser: clerkMocks.useUser,
 }));
@@ -27,9 +26,16 @@ describe(AppWorkspacePage.name, () => {
     clerkMocks.useAuth.mockReturnValue({
       getToken: vi.fn(async () => "session-token"),
     });
+    clerkMocks.useUser.mockReturnValue({
+      isLoaded: true,
+      user: {
+        id: "user_123",
+      },
+    });
   });
 
   afterEach(() => {
+    window.localStorage.clear();
     vi.unstubAllEnvs();
   });
 
@@ -41,69 +47,80 @@ describe(AppWorkspacePage.name, () => {
 
     renderApp(<AppWorkspacePage />);
 
-    expect(screen.getByLabelText("Loading profile")).toBeInTheDocument();
+    expect(screen.getByLabelText("Loading workspace")).toBeInTheDocument();
   });
 
-  it("renders the signed-in user's Supagen profile details", async () => {
-    clerkMocks.useUser.mockReturnValue({
-      isLoaded: true,
-      user: {
-        emailAddresses: [],
-        firstName: "Mithilesh",
-        fullName: "Mithilesh Said",
-        id: "user_123",
-        imageUrl: "https://example.com/avatar.png",
-        primaryEmailAddress: {
-          emailAddress: "mith@supalabs.dev",
-        },
-        username: null,
-      },
+  it("navigates to a valid last visited workspace", async () => {
+    const onNavigateToWorkspace = vi.fn();
+    window.localStorage.setItem(
+      "supagen.workspace.lastVisitedId",
+      "workspace_456",
+    );
+    fetchMock.mockResolvedValueOnce(jsonResponse(createMultiOrgProfile()));
+
+    renderApp(
+      <AppWorkspacePage onNavigateToWorkspace={onNavigateToWorkspace} />,
+    );
+
+    await waitFor(() => {
+      expect(onNavigateToWorkspace).toHaveBeenCalledWith("workspace_456");
     });
-    fetchMock.mockResolvedValueOnce(jsonResponse(createProfile()));
+    expect(window.localStorage.getItem("supagen.workspace.lastVisitedId")).toBe(
+      "workspace_456",
+    );
+  });
 
-    renderApp(<AppWorkspacePage />);
+  it("falls back to the first owner workspace when localStorage is stale", async () => {
+    const onNavigateToWorkspace = vi.fn();
+    window.localStorage.setItem(
+      "supagen.workspace.lastVisitedId",
+      "workspace_stale",
+    );
+    fetchMock.mockResolvedValueOnce(jsonResponse(createMultiOrgProfile()));
 
-    expect(
-      await screen.findByRole("heading", { name: "Your workspace" }),
-    ).toBeInTheDocument();
-    expect(screen.getAllByText("Mithilesh Said")[0]).toBeInTheDocument();
-    expect(screen.getAllByText("mith@supalabs.dev")[0]).toBeInTheDocument();
-    expect(screen.getByText("local-user-123")).toBeInTheDocument();
-    expect(
-      screen.getAllByText("Mithilesh's Organization")[0],
-    ).toBeInTheDocument();
-    expect(screen.getByText("Mithilesh's Workspace")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "User menu" }),
-    ).toBeInTheDocument();
+    renderApp(
+      <AppWorkspacePage onNavigateToWorkspace={onNavigateToWorkspace} />,
+    );
+
+    await waitFor(() => {
+      expect(onNavigateToWorkspace).toHaveBeenCalledWith("workspace_123");
+    });
+    expect(window.localStorage.getItem("supagen.workspace.lastVisitedId")).toBe(
+      "workspace_123",
+    );
+  });
+
+  it("falls back to the first accessible workspace when the user owns no org", async () => {
+    const onNavigateToWorkspace = vi.fn();
+    fetchMock.mockResolvedValueOnce(jsonResponse(createAdminOnlyProfile()));
+
+    renderApp(
+      <AppWorkspacePage onNavigateToWorkspace={onNavigateToWorkspace} />,
+    );
+
+    await waitFor(() => {
+      expect(onNavigateToWorkspace).toHaveBeenCalledWith("workspace_456");
+    });
+    expect(window.localStorage.getItem("supagen.workspace.lastVisitedId")).toBe(
+      "workspace_456",
+    );
   });
 
   it("bootstraps the Supagen profile when the backend reports it missing", async () => {
-    clerkMocks.useUser.mockReturnValue({
-      isLoaded: true,
-      user: {
-        emailAddresses: [],
-        firstName: "Mithilesh",
-        fullName: "Mithilesh Said",
-        id: "user_123",
-        imageUrl: "https://example.com/avatar.png",
-        primaryEmailAddress: {
-          emailAddress: "mith@supalabs.dev",
-        },
-        username: null,
-      },
-    });
+    const onNavigateToWorkspace = vi.fn();
     fetchMock
       .mockResolvedValueOnce(
         jsonResponse({ code: "IAM_PROFILE_NOT_BOOTSTRAPPED" }, 404),
       )
       .mockResolvedValueOnce(jsonResponse(createProfile()));
 
-    renderApp(<AppWorkspacePage />);
+    renderApp(
+      <AppWorkspacePage onNavigateToWorkspace={onNavigateToWorkspace} />,
+    );
 
-    expect(
-      await screen.findByText("Mithilesh's Workspace"),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(onNavigateToWorkspace).toHaveBeenCalledWith("workspace_123");
+    });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/iam/profile");
     expect(fetchMock.mock.calls[0][1]).toMatchObject({
@@ -176,9 +193,40 @@ function createProfile() {
           {
             id: "workspace_123",
             name: "Mithilesh's Workspace",
+            description: null,
           },
         ],
       },
     ],
+  };
+}
+
+function createMultiOrgProfile() {
+  return {
+    ...createProfile(),
+    memberships: [
+      ...createProfile().memberships,
+      {
+        role: "admin",
+        organization: {
+          id: "org_456",
+          name: "Growth Labs",
+        },
+        workspaces: [
+          {
+            id: "workspace_456",
+            name: "Growth Workspace",
+            description: null,
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function createAdminOnlyProfile() {
+  return {
+    ...createProfile(),
+    memberships: [createMultiOrgProfile().memberships[1]!],
   };
 }

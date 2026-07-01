@@ -1,0 +1,1 @@
+ALTER TABLE "iam_workspaces" ADD COLUMN "description" text;

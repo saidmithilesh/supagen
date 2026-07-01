@@ -5,6 +5,11 @@ export const IAM_IDENTITY_PROVIDER_UNAVAILABLE =
   "IAM_IDENTITY_PROVIDER_UNAVAILABLE";
 export const IAM_IDENTITY_PROVIDER_SUBJECT_MISMATCH =
   "IAM_IDENTITY_PROVIDER_SUBJECT_MISMATCH";
+export const IAM_WORKSPACE_FORBIDDEN = "IAM_WORKSPACE_FORBIDDEN";
+export const IAM_WORKSPACE_INVALID_INPUT = "IAM_WORKSPACE_INVALID_INPUT";
+export const IAM_WORKSPACE_LAST_IN_ORGANIZATION =
+  "IAM_WORKSPACE_LAST_IN_ORGANIZATION";
+export const IAM_WORKSPACE_NOT_FOUND = "IAM_WORKSPACE_NOT_FOUND";
 
 export class IamApplicationError extends Error {
   constructor(
@@ -56,6 +61,39 @@ export class IamIdentityProviderSubjectMismatchError extends IamApplicationError
     super(
       IAM_IDENTITY_PROVIDER_SUBJECT_MISMATCH,
       "The identity provider returned a different user than requested.",
+    );
+  }
+}
+
+export class IamWorkspaceForbiddenError extends IamApplicationError {
+  constructor() {
+    super(
+      IAM_WORKSPACE_FORBIDDEN,
+      "The authenticated user cannot perform this workspace operation.",
+    );
+  }
+}
+
+export class IamWorkspaceInvalidInputError extends IamApplicationError {
+  constructor() {
+    super(IAM_WORKSPACE_INVALID_INPUT, "The workspace input is invalid.");
+  }
+}
+
+export class IamWorkspaceLastInOrganizationError extends IamApplicationError {
+  constructor() {
+    super(
+      IAM_WORKSPACE_LAST_IN_ORGANIZATION,
+      "The final workspace in an organization cannot be deleted.",
+    );
+  }
+}
+
+export class IamWorkspaceNotFoundError extends IamApplicationError {
+  constructor() {
+    super(
+      IAM_WORKSPACE_NOT_FOUND,
+      "The workspace was not found for the authenticated user.",
     );
   }
 }

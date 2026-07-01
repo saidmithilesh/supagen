@@ -1,117 +1,61 @@
-import {
-  ArrowDownIcon,
-  ArrowRightIcon,
-  ArrowUpIcon,
-  BadgeDollarSignIcon,
-  BlocksIcon,
-  BotIcon,
-  BoxesIcon,
-  BrainIcon,
-  CableIcon,
-  CircleCheckIcon,
-  ChevronDownIcon,
-  ClockIcon,
-  CircleDollarSignIcon,
-  Code2Icon,
-  CopyIcon,
-  DatabaseIcon,
-  FileInputIcon,
-  FileOutputIcon,
-  FileTextIcon,
-  GavelIcon,
-  LineChartIcon,
-  ImageIcon,
-  LayoutDashboardIcon,
-  MegaphoneIcon,
-  MicVocalIcon,
-  MoonIcon,
-  MoreVerticalIcon,
-  PaletteIcon,
-  PlusIcon,
-  RadioIcon,
-  RocketIcon,
-  SendIcon,
-  SettingsIcon,
-  SlidersHorizontalIcon,
-  SunIcon,
-  TerminalIcon,
-  UserRoundIcon,
-  UsersRoundIcon,
-  VideoIcon,
-  WandSparklesIcon,
-  XIcon,
-  ZapIcon,
-} from "lucide-react";
 import type { CSSProperties } from "react";
 
-import { cn } from "@supagen/ui/lib/utils";
+import { MaterialIcon } from "@supagen/ui/components/material-icon";
 
-const iconMap = {
-  account_tree: BlocksIcon,
-  add: PlusIcon,
-  arrow_downward: ArrowDownIcon,
-  arrow_forward: ArrowRightIcon,
-  arrow_upward: ArrowUpIcon,
-  attach_money: CircleDollarSignIcon,
-  auto_awesome: WandSparklesIcon,
-  bolt: ZapIcon,
-  cable: CableIcon,
-  campaign: MegaphoneIcon,
-  chat: BotIcon,
-  check_circle: CircleCheckIcon,
-  close: XIcon,
-  code: Code2Icon,
-  content_copy: CopyIcon,
-  dashboard: LayoutDashboardIcon,
-  dark_mode: MoonIcon,
-  data_object: DatabaseIcon,
-  description: FileTextIcon,
-  expand_more: ChevronDownIcon,
-  extension: BlocksIcon,
-  face: UserRoundIcon,
-  gavel: GavelIcon,
-  graphic_eq: RadioIcon,
-  groups: UsersRoundIcon,
-  image: ImageIcon,
-  input: FileInputIcon,
-  inventory_2: BoxesIcon,
-  light_mode: SunIcon,
-  monitoring: LineChartIcon,
-  more_vert: MoreVerticalIcon,
-  movie: VideoIcon,
-  output: FileOutputIcon,
-  palette: PaletteIcon,
-  payments: BadgeDollarSignIcon,
-  psychology: BrainIcon,
-  record_voice_over: MicVocalIcon,
-  rocket_launch: RocketIcon,
-  schedule: ClockIcon,
-  send: SendIcon,
-  settings: SettingsIcon,
-  smart_toy: BotIcon,
-  support_agent: UserRoundIcon,
-  terminal: TerminalIcon,
-  tune: SlidersHorizontalIcon,
-  videocam: VideoIcon,
-} as const;
-
-export type MarketingIconName = keyof typeof iconMap;
+export type MarketingIconName =
+  | "account_tree"
+  | "add"
+  | "arrow_downward"
+  | "arrow_forward"
+  | "arrow_upward"
+  | "attach_money"
+  | "auto_awesome"
+  | "bolt"
+  | "cable"
+  | "campaign"
+  | "chat"
+  | "check_circle"
+  | "close"
+  | "code"
+  | "content_copy"
+  | "dashboard"
+  | "dark_mode"
+  | "data_object"
+  | "description"
+  | "expand_more"
+  | "extension"
+  | "face"
+  | "gavel"
+  | "graphic_eq"
+  | "groups"
+  | "image"
+  | "input"
+  | "inventory_2"
+  | "light_mode"
+  | "monitoring"
+  | "more_vert"
+  | "movie"
+  | "output"
+  | "palette"
+  | "payments"
+  | "psychology"
+  | "record_voice_over"
+  | "rocket_launch"
+  | "schedule"
+  | "send"
+  | "settings"
+  | "smart_toy"
+  | "support_agent"
+  | "terminal"
+  | "tune"
+  | "videocam";
 
 type MarketingIconProps = {
-  name: MarketingIconName;
   className?: string;
+  name: MarketingIconName;
   style?: CSSProperties;
 };
 
 export function MarketingIcon({ name, className, style }: MarketingIconProps) {
-  const Icon = iconMap[name];
-
-  return (
-    <Icon
-      aria-hidden="true"
-      className={cn("marketing-icon", className)}
-      style={style}
-      strokeWidth={2}
-    />
-  );
+  return <MaterialIcon className={className} name={name} style={style} />;
 }

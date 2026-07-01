@@ -14,6 +14,7 @@ export type IamProfile = {
     workspaces: Array<{
       id: string;
       name: string;
+      description: string | null;
     }>;
   }>;
 };
