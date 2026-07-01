@@ -8,6 +8,13 @@
       "when": 1782712257983,
       "tag": "0000_curved_retro_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782882845187,
+      "tag": "0001_jittery_red_hulk",
+      "breakpoints": true
     }
   ]
 }

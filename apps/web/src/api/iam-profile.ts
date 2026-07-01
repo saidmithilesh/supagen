@@ -16,8 +16,26 @@ export type IamProfile = {
     workspaces: Array<{
       id: string;
       name: string;
+      description: string | null;
     }>;
   }>;
+};
+
+export type IamWorkspace = {
+  id: string;
+  name: string;
+  description: string | null;
+  organization: {
+    id: string;
+    name: string;
+  };
+  membershipRole: "owner" | "admin" | "member";
+};
+
+export type CreateIamWorkspaceInput = {
+  organizationId: string;
+  name: string;
+  description?: string | null;
 };
 
 export class IamProfileApiError extends Error {
@@ -30,11 +48,18 @@ export class IamProfileApiError extends Error {
 }
 
 export async function getIamProfile(token: string) {
-  return requestIamProfile("GET", "/iam/profile", token);
+  return requestIamApi<IamProfile>("GET", "/iam/profile", token);
 }
 
 export async function bootstrapIamProfile(token: string) {
-  return requestIamProfile("POST", "/iam/profile/bootstrap", token);
+  return requestIamApi<IamProfile>("POST", "/iam/profile/bootstrap", token);
+}
+
+export async function createIamWorkspace(
+  token: string,
+  input: CreateIamWorkspaceInput,
+) {
+  return requestIamApi<IamWorkspace>("POST", "/iam/workspaces", token, input);
 }
 
 export function isIamProfileNotBootstrapped(error: unknown) {
@@ -45,16 +70,19 @@ export function isIamProfileNotBootstrapped(error: unknown) {
   );
 }
 
-async function requestIamProfile(
-  method: "GET" | "POST",
+async function requestIamApi<T>(
+  method: "DELETE" | "GET" | "PATCH" | "POST",
   path: string,
   token: string,
+  body?: unknown,
 ) {
   const response = await fetch(getApiUrl(path), {
     method,
     headers: {
       Authorization: `Bearer ${token}`,
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
     },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 
   if (!response.ok) {
@@ -64,7 +92,7 @@ async function requestIamProfile(
     );
   }
 
-  return (await response.json()) as IamProfile;
+  return (await response.json()) as T;
 }
 
 async function readErrorCode(response: Response) {

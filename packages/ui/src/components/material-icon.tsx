@@ -24,6 +24,7 @@ function MaterialIcon({
       aria-hidden={ariaHidden ?? (ariaLabel ? undefined : true)}
       aria-label={ariaLabel}
       className={cn("material-symbols-outlined", className)}
+      data-slot="material-icon"
       style={{ fontSize: size, ...style }}
       {...props}
     >
