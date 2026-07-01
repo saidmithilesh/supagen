@@ -99,7 +99,6 @@ export function ModelsCatalogPage() {
     [models],
   );
   const modelCount = models?.length ?? 0;
-  const authorCount = modelGroups.length;
   const activeFilterCount = countSelectedFilters(selectedFilters);
 
   return (
@@ -115,9 +114,9 @@ export function ModelsCatalogPage() {
               </h1>
             </div>
             <p className="text-sm text-muted-foreground">
-              Choose from over {modelCount} models across {authorCount}{" "}
-              providers in Supagen for agentic workflows, image generation,
-              speech synthesis, video creation and more...
+              Choose from over 400 models across 50+ providers in Supagen for
+              agentic workflows, image generation, speech synthesis, video
+              creation and more...
             </p>
           </header>
 
