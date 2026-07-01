@@ -52,6 +52,10 @@ _Avoid_: Model, database model, frontend model
 Supagen's owned directory of AI providers and catalog models. It supports public model discovery, pre-invocation validation, routing decisions, and future cost calculation workflows.
 _Avoid_: Frontend catalog, static model list, provider model API
 
+**Catalog Model Capability**:
+A user-facing capability that Supagen can positively identify for a catalog model, such as reasoning, reference images, voice selection, or text embeddings. Capabilities are discovery signals, not exhaustive unsupported-feature declarations.
+_Avoid_: Supported parameter, provider flag, raw feature field
+
 ### Observability
 
 **Observability**:

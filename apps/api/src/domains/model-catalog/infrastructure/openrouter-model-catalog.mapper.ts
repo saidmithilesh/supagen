@@ -1,4 +1,7 @@
-import type { ModelCatalogModel } from "../domain/model-catalog-model";
+import type {
+  ModelCatalogCapability,
+  ModelCatalogModel,
+} from "../domain/model-catalog-model";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai";
 const OPENROUTER_ICON_BASE_URL = `${OPENROUTER_BASE_URL}/images/icons/`;
@@ -119,6 +122,26 @@ export function mapOpenRouterCatalogModels(
   return models;
 }
 
+export function mapOpenRouterModelEndpointCapabilities(
+  model: ModelCatalogModel,
+  payload: unknown,
+): ModelCatalogCapability[] {
+  const endpoints = getEndpointRecords(payload);
+
+  if (endpoints.length === 0) {
+    return model.capabilities;
+  }
+
+  return getModelCapabilities({
+    inputModalities: model.inputModalities,
+    outputModalities: model.outputModalities,
+    records: endpoints.map((endpoint) => ({
+      endpoint,
+      model: asRecord(endpoint.model),
+    })),
+  });
+}
+
 function mapOpenRouterCatalogModel(
   record: Record<string, unknown>,
 ): ModelCatalogModel | null {
@@ -141,6 +164,7 @@ function mapOpenRouterCatalogModel(
 
   const modelNameParts = getModelNameParts(record);
   const authorName = getAuthorName(record, endpoint, modelNameParts.authorName);
+  const supportedParameters = asStringArray(endpoint.supported_parameters);
 
   return {
     slug,
@@ -155,12 +179,500 @@ function mapOpenRouterCatalogModel(
     authorIconUrl: getAuthorIconUrl(record, endpoint, authorName),
     inputModalities: asStringArray(record.input_modalities),
     outputModalities: asStringArray(record.output_modalities),
+    supportedParameters,
+    capabilities: getModelCapabilities({
+      inputModalities: asStringArray(record.input_modalities),
+      outputModalities: asStringArray(record.output_modalities),
+      records: [{ endpoint, model: record }],
+    }),
     releaseDate: asString(record.release_date) ?? asString(record.created_at),
     inputPrice: getDisplayPrice(endpoint, INPUT_DISPLAY_LABELS, "prompt"),
     outputPrice: getDisplayPrice(endpoint, OUTPUT_DISPLAY_LABELS, "completion"),
     contextWindowSize:
       asNumber(endpoint.context_length) ?? asNumber(record.context_length),
+    maxOutputTokens: asNumber(endpoint.max_completion_tokens),
   };
+}
+
+function getModelCapabilities(input: {
+  inputModalities: string[];
+  outputModalities: string[];
+  records: Array<{
+    endpoint: Record<string, unknown>;
+    model: Record<string, unknown> | null;
+  }>;
+}) {
+  return MODEL_CAPABILITY_DEFINITIONS.filter((definition) =>
+    definition.isSupported(input),
+  ).map(({ key, label, outputModality }) => ({
+    key,
+    label,
+    outputModality,
+  }));
+}
+
+function getFeatureSupportedParameter(
+  features: Record<string, unknown> | null,
+  parameterKey: string,
+) {
+  return asBoolean(asRecord(features?.supported_parameters)?.[parameterKey]);
+}
+
+function hasAnyCapabilityParameter(
+  supportedParameterKeys: Set<string>,
+  parameterKeys: string[],
+) {
+  return parameterKeys.some((parameterKey) =>
+    supportedParameterKeys.has(parameterKey),
+  );
+}
+
+function normalizeCapabilityKey(value: string) {
+  return value.trim().toLowerCase();
+}
+
+const MODEL_CAPABILITY_DEFINITIONS: Array<
+  ModelCatalogCapability & {
+    isSupported(input: {
+      inputModalities: string[];
+      outputModalities: string[];
+      records: Array<{
+        endpoint: Record<string, unknown>;
+        model: Record<string, unknown> | null;
+      }>;
+    }): boolean;
+  }
+> = [
+  {
+    key: "text.reasoning",
+    label: "Reasoning",
+    outputModality: "text",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "text") &&
+      records.some(({ endpoint, model }) => {
+        const supportedParameterKeys = getSupportedParameterKeys(endpoint);
+
+        return (
+          asBoolean(endpoint.supports_reasoning) === true ||
+          hasAnyCapabilityParameter(supportedParameterKeys, [
+            "reasoning",
+            "include_reasoning",
+          ]) ||
+          (asBoolean(endpoint.supports_reasoning) === null &&
+            asBoolean(model?.supports_reasoning) === true)
+        );
+      }),
+  },
+  {
+    key: "text.tool-calling",
+    label: "Tool Calling",
+    outputModality: "text",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "text") &&
+      records.some(({ endpoint }) => {
+        const supportedParameterKeys = getSupportedParameterKeys(endpoint);
+
+        return (
+          supportsToolCalling(endpoint, supportedParameterKeys) ||
+          hasAnyCapabilityParameter(supportedParameterKeys, [
+            "tool_choice",
+            "parallel_tool_calls",
+          ])
+        );
+      }),
+  },
+  {
+    key: "text.structured-outputs",
+    label: "Structured Outputs",
+    outputModality: "text",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "text") &&
+      records.some(({ endpoint }) =>
+        supportsStructuredOutputs(
+          endpoint,
+          getSupportedParameterKeys(endpoint),
+        ),
+      ),
+  },
+  {
+    key: "text.web-search",
+    label: "Web Search",
+    outputModality: "text",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "text") &&
+      records.some(({ endpoint }) => {
+        const features = asRecord(endpoint.features);
+
+        return (
+          asBoolean(features?.supports_native_web_search) === true ||
+          hasAnyCapabilityParameter(getSupportedParameterKeys(endpoint), [
+            "web_search_options",
+          ])
+        );
+      }),
+  },
+  {
+    key: "image.text-to-image",
+    label: "Text to Image",
+    outputModality: "image",
+    isSupported: ({ inputModalities, outputModalities }) =>
+      hasInputModality(inputModalities, "text") &&
+      hasOutputModality(outputModalities, "image"),
+  },
+  {
+    key: "image.reference-images",
+    label: "Reference Images",
+    outputModality: "image",
+    isSupported: ({ inputModalities, outputModalities, records }) =>
+      hasOutputModality(outputModalities, "image") &&
+      (hasInputModality(inputModalities, "image") ||
+        records.some(({ endpoint }) => {
+          const inputReferences = asRecord(
+            getImageParameters(endpoint)?.input_references,
+          );
+
+          return hasPositiveNumber(inputReferences?.max);
+        })),
+  },
+  {
+    key: "image.multiple-images",
+    label: "Multiple Images",
+    outputModality: "image",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "image") &&
+      records.some(({ endpoint }) =>
+        hasNumberGreaterThan(asRecord(getImageParameters(endpoint)?.n)?.max, 1),
+      ),
+  },
+  {
+    key: "image.resolution-options",
+    label: "Resolutions / Aspect Ratio Options",
+    outputModality: "image",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "image") &&
+      records.some(({ endpoint }) => {
+        const parameters = getImageParameters(endpoint);
+
+        return (
+          hasNonEmptyArray(parameters?.resolutions) ||
+          hasNonEmptyArray(parameters?.aspect_ratios)
+        );
+      }),
+  },
+  {
+    key: "image.quality-control",
+    label: "Quality Control",
+    outputModality: "image",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "image") &&
+      records.some(({ endpoint }) =>
+        hasNonEmptyArray(getImageParameters(endpoint)?.qualities),
+      ),
+  },
+  {
+    key: "image.image-text-output",
+    label: "Image + Text Output",
+    outputModality: "image",
+    isSupported: ({ outputModalities }) =>
+      hasOutputModality(outputModalities, "image") &&
+      hasOutputModality(outputModalities, "text"),
+  },
+  {
+    key: "video.text-to-video",
+    label: "Text to Video",
+    outputModality: "video",
+    isSupported: ({ inputModalities, outputModalities }) =>
+      hasInputModality(inputModalities, "text") &&
+      hasOutputModality(outputModalities, "video"),
+  },
+  {
+    key: "video.image-to-video",
+    label: "Image to Video",
+    outputModality: "video",
+    isSupported: ({ inputModalities, outputModalities, records }) =>
+      hasOutputModality(outputModalities, "video") &&
+      (hasInputModality(inputModalities, "image") ||
+        records.some(({ endpoint }) =>
+          hasNonEmptyArray(
+            getVideoParameters(endpoint)?.supported_frame_images,
+          ),
+        ) ||
+        records.some(({ endpoint }) =>
+          hasPricingLabel(endpoint, "Image to Video"),
+        )),
+  },
+  {
+    key: "video.reference-frames",
+    label: "Reference Frames",
+    outputModality: "video",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "video") &&
+      records.some(({ endpoint }) =>
+        hasNonEmptyArray(getVideoParameters(endpoint)?.supported_frame_images),
+      ),
+  },
+  {
+    key: "video.audio-generation",
+    label: "Audio Generation",
+    outputModality: "video",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "video") &&
+      records.some(
+        ({ endpoint }) =>
+          asBoolean(getVideoParameters(endpoint)?.generate_audio) === true,
+      ),
+  },
+  {
+    key: "video.size-resolution-options",
+    label: "Size/Resolution Options",
+    outputModality: "video",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "video") &&
+      records.some(({ endpoint }) => {
+        const parameters = getVideoParameters(endpoint);
+
+        return (
+          hasNonEmptyArray(parameters?.supported_sizes) ||
+          hasNonEmptyArray(parameters?.supported_resolutions) ||
+          hasNonEmptyArray(parameters?.supported_aspect_ratios)
+        );
+      }),
+  },
+  {
+    key: "speech.text-to-speech",
+    label: "Text to Speech",
+    outputModality: "speech",
+    isSupported: ({ inputModalities, outputModalities }) =>
+      hasInputModality(inputModalities, "text") &&
+      hasOutputModality(outputModalities, "speech"),
+  },
+  {
+    key: "speech.voice-selection",
+    label: "Voice Selection",
+    outputModality: "speech",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "speech") &&
+      records.some(({ endpoint, model }) =>
+        hasNonEmptyArray(
+          endpoint.supported_tts_voices ?? model?.supported_tts_voices,
+        ),
+      ),
+  },
+  {
+    key: "audio.audio-input",
+    label: "Audio Input",
+    outputModality: "audio",
+    isSupported: ({ inputModalities, outputModalities, records }) =>
+      hasOutputModality(outputModalities, "audio") &&
+      (hasInputModality(inputModalities, "audio") ||
+        records.some(({ endpoint }) =>
+          hasAnyPricingLabel(endpoint, ["Audio", "Input Audio"]),
+        )),
+  },
+  {
+    key: "audio.audio-output",
+    label: "Audio Output",
+    outputModality: "audio",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "audio") ||
+      records.some(({ endpoint }) => hasPricingLabel(endpoint, "Output Audio")),
+  },
+  {
+    key: "audio.song-generation",
+    label: "Song Generation",
+    outputModality: "audio",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "audio") &&
+      records.some(({ endpoint }) =>
+        hasPricingLabel(endpoint, "Song Generation"),
+      ),
+  },
+  {
+    key: "audio.tool-calling",
+    label: "Tool Calling",
+    outputModality: "audio",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "audio") &&
+      records.some(({ endpoint }) =>
+        supportsToolCalling(endpoint, getSupportedParameterKeys(endpoint)),
+      ),
+  },
+  {
+    key: "audio.structured-outputs",
+    label: "Structured Outputs",
+    outputModality: "audio",
+    isSupported: ({ outputModalities, records }) =>
+      hasOutputModality(outputModalities, "audio") &&
+      records.some(({ endpoint }) =>
+        supportsStructuredOutputs(
+          endpoint,
+          getSupportedParameterKeys(endpoint),
+        ),
+      ),
+  },
+  {
+    key: "embeddings.text-embeddings",
+    label: "Text Embeddings",
+    outputModality: "embeddings",
+    isSupported: ({ inputModalities, outputModalities }) =>
+      hasInputModality(inputModalities, "text") &&
+      hasOutputModality(outputModalities, "embeddings"),
+  },
+  {
+    key: "embeddings.image-embeddings",
+    label: "Image Embeddings",
+    outputModality: "embeddings",
+    isSupported: ({ inputModalities, outputModalities }) =>
+      hasInputModality(inputModalities, "image") &&
+      hasOutputModality(outputModalities, "embeddings"),
+  },
+  {
+    key: "embeddings.file-embeddings",
+    label: "File Embeddings",
+    outputModality: "embeddings",
+    isSupported: ({ inputModalities, outputModalities }) =>
+      hasInputModality(inputModalities, "file") &&
+      hasOutputModality(outputModalities, "embeddings"),
+  },
+  {
+    key: "embeddings.audio-embeddings",
+    label: "Audio Embeddings",
+    outputModality: "embeddings",
+    isSupported: ({ inputModalities, outputModalities }) =>
+      hasInputModality(inputModalities, "audio") &&
+      hasOutputModality(outputModalities, "embeddings"),
+  },
+  {
+    key: "embeddings.video-embeddings",
+    label: "Video Embeddings",
+    outputModality: "embeddings",
+    isSupported: ({ inputModalities, outputModalities }) =>
+      hasInputModality(inputModalities, "video") &&
+      hasOutputModality(outputModalities, "embeddings"),
+  },
+  {
+    key: "rerank.text-reranking",
+    label: "Text Reranking",
+    outputModality: "rerank",
+    isSupported: ({ inputModalities, outputModalities }) =>
+      hasInputModality(inputModalities, "text") &&
+      hasOutputModality(outputModalities, "rerank"),
+  },
+  {
+    key: "rerank.multimodal-reranking",
+    label: "Multimodal Reranking",
+    outputModality: "rerank",
+    isSupported: ({ inputModalities, outputModalities }) =>
+      hasInputModality(inputModalities, "image") &&
+      hasOutputModality(outputModalities, "rerank"),
+  },
+];
+
+function supportsToolCalling(
+  endpoint: Record<string, unknown>,
+  supportedParameterKeys: Set<string>,
+) {
+  return (
+    asBoolean(endpoint.supports_tool_parameters) === true ||
+    hasAnyCapabilityParameter(supportedParameterKeys, [
+      "tools",
+      "tool_choice",
+      "parallel_tool_calls",
+    ])
+  );
+}
+
+function supportsStructuredOutputs(
+  endpoint: Record<string, unknown>,
+  supportedParameterKeys: Set<string>,
+) {
+  const features = asRecord(endpoint.features);
+  const structuredOutputs =
+    getFeatureSupportedParameter(features, "structured_outputs") ??
+    hasAnyCapabilityParameter(supportedParameterKeys, ["structured_outputs"]);
+  const responseFormat =
+    getFeatureSupportedParameter(features, "response_format") ??
+    hasAnyCapabilityParameter(supportedParameterKeys, ["response_format"]);
+
+  return structuredOutputs || responseFormat;
+}
+
+function getSupportedParameterKeys(endpoint: Record<string, unknown>) {
+  return new Set(
+    asStringArray(endpoint.supported_parameters).map(normalizeCapabilityKey),
+  );
+}
+
+function getImageParameters(endpoint: Record<string, unknown>) {
+  return asRecord(endpoint.supported_image_parameters);
+}
+
+function getVideoParameters(endpoint: Record<string, unknown>) {
+  return asRecord(endpoint.supported_video_parameters);
+}
+
+function hasInputModality(modalities: string[], modality: string) {
+  return hasModality(modalities, modality);
+}
+
+function hasOutputModality(modalities: string[], modality: string) {
+  return hasModality(modalities, modality);
+}
+
+function hasModality(modalities: string[], modality: string) {
+  const normalizedModality = normalizeCapabilityKey(modality);
+
+  return modalities.some((value) => {
+    const normalizedValue = normalizeCapabilityKey(value);
+
+    return (
+      normalizedValue === normalizedModality ||
+      (normalizedModality === "embeddings" && normalizedValue === "embedding")
+    );
+  });
+}
+
+function hasNonEmptyArray(value: unknown) {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function hasPositiveNumber(value: unknown) {
+  const number = asFiniteNumber(value);
+
+  return number !== null && number > 0;
+}
+
+function hasNumberGreaterThan(value: unknown, threshold: number) {
+  const number = asFiniteNumber(value);
+
+  return number !== null && number > threshold;
+}
+
+function hasAnyPricingLabel(
+  endpoint: Record<string, unknown>,
+  labels: string[],
+) {
+  return labels.some((label) => hasPricingLabel(endpoint, label));
+}
+
+function hasPricingLabel(endpoint: Record<string, unknown>, label: string) {
+  const normalizedLabel = normalizeDisplayLabel(label);
+
+  if (!normalizedLabel) {
+    return false;
+  }
+
+  return (getDisplayPricing(endpoint) ?? []).some(
+    (entry) =>
+      normalizeDisplayLabel(asString(asRecord(entry)?.sku_label)) ===
+      normalizedLabel,
+  );
+}
+
+function getEndpointRecords(payload: unknown): Array<Record<string, unknown>> {
+  const data = asRecord(payload)?.data;
+
+  return Array.isArray(data) ? data.filter(isRecord) : [];
 }
 
 function getCatalogRecords(payload: unknown): Array<Record<string, unknown>> {
@@ -452,6 +964,10 @@ function asStringArray(value: unknown) {
 
 function asString(value: unknown) {
   return typeof value === "string" && value.trim() ? value : null;
+}
+
+function asBoolean(value: unknown) {
+  return typeof value === "boolean" ? value : null;
 }
 
 function asPriceValue(value: unknown) {

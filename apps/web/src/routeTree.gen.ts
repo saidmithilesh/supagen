@@ -17,6 +17,7 @@ import { Route as ModelsRouteImport } from "./routes/models";
 import { Route as AppRouteImport } from "./routes/app";
 import { Route as IndexRouteImport } from "./routes/index";
 import { Route as AuthSplatRouteImport } from "./routes/auth.$";
+import { Route as ModelsAuthorModelRouteImport } from "./routes/models_.$author.$model";
 import { Route as AppWorkspacesWorkspaceIdRouteImport } from "./routes/app_.workspaces.$workspaceId";
 import { Route as AppWorkspacesWorkspaceIdOverviewRouteImport } from "./routes/app_.workspaces.$workspaceId_.overview";
 
@@ -60,6 +61,11 @@ const AuthSplatRoute = AuthSplatRouteImport.update({
   path: "/auth/$",
   getParentRoute: () => rootRouteImport,
 } as any);
+const ModelsAuthorModelRoute = ModelsAuthorModelRouteImport.update({
+  id: "/models_/$author/$model",
+  path: "/models/$author/$model",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const AppWorkspacesWorkspaceIdRoute =
   AppWorkspacesWorkspaceIdRouteImport.update({
     id: "/app_/workspaces/$workspaceId",
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   "/workspaces": typeof WorkspacesRoute;
   "/auth/$": typeof AuthSplatRoute;
   "/app/workspaces/$workspaceId": typeof AppWorkspacesWorkspaceIdRoute;
+  "/models/$author/$model": typeof ModelsAuthorModelRoute;
   "/app/workspaces/$workspaceId/overview": typeof AppWorkspacesWorkspaceIdOverviewRoute;
 }
 export interface FileRoutesByTo {
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   "/workspaces": typeof WorkspacesRoute;
   "/auth/$": typeof AuthSplatRoute;
   "/app/workspaces/$workspaceId": typeof AppWorkspacesWorkspaceIdRoute;
+  "/models/$author/$model": typeof ModelsAuthorModelRoute;
   "/app/workspaces/$workspaceId/overview": typeof AppWorkspacesWorkspaceIdOverviewRoute;
 }
 export interface FileRoutesById {
@@ -108,6 +116,7 @@ export interface FileRoutesById {
   "/workspaces": typeof WorkspacesRoute;
   "/auth/$": typeof AuthSplatRoute;
   "/app_/workspaces/$workspaceId": typeof AppWorkspacesWorkspaceIdRoute;
+  "/models_/$author/$model": typeof ModelsAuthorModelRoute;
   "/app_/workspaces/$workspaceId_/overview": typeof AppWorkspacesWorkspaceIdOverviewRoute;
 }
 export interface FileRouteTypes {
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
     | "/workspaces"
     | "/auth/$"
     | "/app/workspaces/$workspaceId"
+    | "/models/$author/$model"
     | "/app/workspaces/$workspaceId/overview";
   fileRoutesByTo: FileRoutesByTo;
   to:
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
     | "/workspaces"
     | "/auth/$"
     | "/app/workspaces/$workspaceId"
+    | "/models/$author/$model"
     | "/app/workspaces/$workspaceId/overview";
   id:
     | "__root__"
@@ -146,6 +157,7 @@ export interface FileRouteTypes {
     | "/workspaces"
     | "/auth/$"
     | "/app_/workspaces/$workspaceId"
+    | "/models_/$author/$model"
     | "/app_/workspaces/$workspaceId_/overview";
   fileRoutesById: FileRoutesById;
 }
@@ -159,6 +171,7 @@ export interface RootRouteChildren {
   WorkspacesRoute: typeof WorkspacesRoute;
   AuthSplatRoute: typeof AuthSplatRoute;
   AppWorkspacesWorkspaceIdRoute: typeof AppWorkspacesWorkspaceIdRoute;
+  ModelsAuthorModelRoute: typeof ModelsAuthorModelRoute;
   AppWorkspacesWorkspaceIdOverviewRoute: typeof AppWorkspacesWorkspaceIdOverviewRoute;
 }
 
@@ -220,6 +233,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthSplatRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/models_/$author/$model": {
+      id: "/models_/$author/$model";
+      path: "/models/$author/$model";
+      fullPath: "/models/$author/$model";
+      preLoaderRoute: typeof ModelsAuthorModelRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/app_/workspaces/$workspaceId": {
       id: "/app_/workspaces/$workspaceId";
       path: "/app/workspaces/$workspaceId";
@@ -247,6 +267,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspacesRoute: WorkspacesRoute,
   AuthSplatRoute: AuthSplatRoute,
   AppWorkspacesWorkspaceIdRoute: AppWorkspacesWorkspaceIdRoute,
+  ModelsAuthorModelRoute: ModelsAuthorModelRoute,
   AppWorkspacesWorkspaceIdOverviewRoute: AppWorkspacesWorkspaceIdOverviewRoute,
 };
 export const routeTree = rootRouteImport

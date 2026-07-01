@@ -3,3 +3,9 @@ export class ModelCatalogSourceUnavailableError extends Error {
     super(message);
   }
 }
+
+export class ModelCatalogModelNotFoundError extends Error {
+  constructor(readonly modelRef: string) {
+    super(`Model catalog model not found: ${modelRef}`);
+  }
+}

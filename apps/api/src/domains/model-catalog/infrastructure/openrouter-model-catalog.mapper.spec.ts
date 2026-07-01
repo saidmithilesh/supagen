@@ -1,4 +1,7 @@
-import { mapOpenRouterCatalogModels } from "./openrouter-model-catalog.mapper";
+import {
+  mapOpenRouterCatalogModels,
+  mapOpenRouterModelEndpointCapabilities,
+} from "./openrouter-model-catalog.mapper";
 
 describe(mapOpenRouterCatalogModels.name, () => {
   const mapSingleModel = (
@@ -11,6 +14,8 @@ describe(mapOpenRouterCatalogModels.name, () => {
           slug: "provider/model",
           permaslug: "provider/model-20260101",
           short_name: "Provider Model",
+          input_modalities: ["text"],
+          output_modalities: ["text"],
           endpoint,
           ...overrides,
         },
@@ -33,8 +38,33 @@ describe(mapOpenRouterCatalogModels.name, () => {
             context_length: 1_000_000,
             input_modalities: ["text", "image", null],
             output_modalities: ["text"],
+            supports_reasoning: true,
             endpoint: {
               context_length: 900_000,
+              max_completion_tokens: 65_536,
+              supports_reasoning: true,
+              supports_tool_parameters: true,
+              supported_parameters: [
+                "max_tokens",
+                "stop",
+                "reasoning",
+                "include_reasoning",
+                "tools",
+                "tool_choice",
+                "structured_outputs",
+                "response_format",
+                "verbosity",
+                null,
+              ],
+              features: {
+                supports_native_web_search: true,
+                supports_tool_choice: {
+                  literal_none: true,
+                  literal_auto: true,
+                  literal_required: true,
+                  type_function: true,
+                },
+              },
               display_pricing: [
                 {
                   sku_label: "Input Price",
@@ -68,12 +98,342 @@ describe(mapOpenRouterCatalogModels.name, () => {
         authorIconUrl: "https://openrouter.ai/images/icons/Anthropic.svg",
         inputModalities: ["text", "image"],
         outputModalities: ["text"],
+        supportedParameters: [
+          "max_tokens",
+          "stop",
+          "reasoning",
+          "include_reasoning",
+          "tools",
+          "tool_choice",
+          "structured_outputs",
+          "response_format",
+          "verbosity",
+        ],
+        capabilities: [
+          {
+            key: "text.reasoning",
+            label: "Reasoning",
+            outputModality: "text",
+          },
+          {
+            key: "text.tool-calling",
+            label: "Tool Calling",
+            outputModality: "text",
+          },
+          {
+            key: "text.structured-outputs",
+            label: "Structured Outputs",
+            outputModality: "text",
+          },
+          {
+            key: "text.web-search",
+            label: "Web Search",
+            outputModality: "text",
+          },
+        ],
         releaseDate: "2026-06-30T18:11:23.921Z",
         inputPrice: "$2/M tokens",
         outputPrice: "$10/M tokens",
         contextWindowSize: 900_000,
+        maxOutputTokens: 65_536,
       },
     ]);
+  });
+
+  it("normalizes text capability flags from supported parameters and source booleans", () => {
+    expect(
+      mapSingleModel({
+        supports_reasoning: true,
+        supports_tool_parameters: true,
+        supported_parameters: [
+          "tool_choice",
+          "parallel_tool_calls",
+          "structured_outputs",
+          "response_format",
+          "web_search_options",
+        ],
+      }),
+    ).toMatchObject({
+      capabilities: expect.arrayContaining([
+        expect.objectContaining({ key: "text.reasoning" }),
+        expect.objectContaining({ key: "text.tool-calling" }),
+        expect.objectContaining({ key: "text.structured-outputs" }),
+        expect.objectContaining({ key: "text.web-search" }),
+      ]),
+    });
+  });
+
+  it("maps native web search from endpoint features without requiring the web search parameter", () => {
+    expect(
+      mapSingleModel({
+        supported_parameters: [],
+        features: {
+          supports_native_web_search: true,
+        },
+      }),
+    ).toMatchObject({
+      capabilities: expect.arrayContaining([
+        expect.objectContaining({ key: "text.web-search" }),
+      ]),
+    });
+  });
+
+  it("maps web search from the request parameter when native search is not listed", () => {
+    expect(
+      mapSingleModel({
+        supported_parameters: ["web_search_options"],
+      }),
+    ).toMatchObject({
+      capabilities: expect.arrayContaining([
+        expect.objectContaining({ key: "text.web-search" }),
+      ]),
+    });
+  });
+
+  it("uses endpoint feature overrides for structured output parameters", () => {
+    expect(
+      mapSingleModel({
+        supported_parameters: ["structured_outputs", "response_format"],
+        features: {
+          supported_parameters: {
+            structured_outputs: false,
+            response_format: false,
+          },
+        },
+      }),
+    ).toMatchObject({
+      capabilities: [],
+    });
+
+    expect(
+      mapSingleModel({
+        supported_parameters: [],
+        features: {
+          supported_parameters: {
+            response_format: true,
+          },
+        },
+      }),
+    ).toMatchObject({
+      capabilities: expect.arrayContaining([
+        expect.objectContaining({ key: "text.structured-outputs" }),
+      ]),
+    });
+  });
+
+  it("folds tool choice variants into the user-facing tool calling capability", () => {
+    expect(
+      mapSingleModel({
+        supports_tool_parameters: false,
+        supported_parameters: ["tool_choice"],
+      }),
+    ).toMatchObject({
+      capabilities: expect.arrayContaining([
+        expect.objectContaining({ key: "text.tool-calling" }),
+      ]),
+    });
+
+    expect(
+      mapSingleModel({
+        supports_tool_parameters: false,
+        supported_parameters: ["parallel_tool_calls"],
+      }),
+    ).toMatchObject({
+      capabilities: expect.arrayContaining([
+        expect.objectContaining({ key: "text.tool-calling" }),
+      ]),
+    });
+  });
+
+  it("does not let model-level reasoning support override an explicit endpoint false", () => {
+    expect(
+      mapSingleModel(
+        {
+          supports_reasoning: false,
+          supported_parameters: [],
+        },
+        {
+          supports_reasoning: true,
+        },
+      ),
+    ).toMatchObject({
+      capabilities: [],
+    });
+  });
+
+  it("aggregates model endpoint capabilities when any serving endpoint supports them", () => {
+    const model = mapSingleModel({
+      supported_parameters: [],
+    });
+
+    expect(
+      mapOpenRouterModelEndpointCapabilities(model, {
+        data: [
+          {
+            supported_parameters: [],
+          },
+          {
+            supported_parameters: ["web_search_options"],
+          },
+        ],
+      }),
+    ).toEqual([
+      {
+        key: "text.web-search",
+        label: "Web Search",
+        outputModality: "text",
+      },
+    ]);
+  });
+
+  it("maps approved image capability chips", () => {
+    expect(
+      mapSingleModel(
+        {
+          supported_image_parameters: {
+            n: { max: 4 },
+            qualities: ["high"],
+            resolutions: ["1024x1024"],
+          },
+        },
+        {
+          input_modalities: ["text", "image"],
+          output_modalities: ["text", "image"],
+        },
+      ),
+    ).toMatchObject({
+      capabilities: [
+        { key: "image.text-to-image" },
+        { key: "image.reference-images" },
+        { key: "image.multiple-images" },
+        { key: "image.resolution-options" },
+        { key: "image.quality-control" },
+        { key: "image.image-text-output" },
+      ],
+    });
+  });
+
+  it("maps approved video capability chips", () => {
+    expect(
+      mapSingleModel(
+        {
+          supported_video_parameters: {
+            generate_audio: true,
+            supported_frame_images: ["first_frame", "last_frame"],
+            supported_sizes: ["720p"],
+          },
+        },
+        {
+          input_modalities: ["text", "image"],
+          output_modalities: ["video"],
+        },
+      ),
+    ).toMatchObject({
+      capabilities: [
+        { key: "video.text-to-video" },
+        { key: "video.image-to-video" },
+        { key: "video.reference-frames" },
+        { key: "video.audio-generation" },
+        { key: "video.size-resolution-options" },
+      ],
+    });
+  });
+
+  it("maps approved speech capability chips", () => {
+    expect(
+      mapSingleModel(
+        {},
+        {
+          input_modalities: ["text"],
+          output_modalities: ["speech"],
+          supported_tts_voices: ["Zephyr"],
+        },
+      ),
+    ).toMatchObject({
+      capabilities: [
+        { key: "speech.text-to-speech" },
+        { key: "speech.voice-selection" },
+      ],
+    });
+  });
+
+  it("maps approved audio capability chips", () => {
+    expect(
+      mapSingleModel(
+        {
+          supported_parameters: ["tools", "response_format"],
+          display_pricing: [
+            {
+              sku_label: "Song Generation",
+              price: "0.01",
+              displayMultiplier: 1,
+              unitLabel: "/song",
+            },
+          ],
+        },
+        {
+          input_modalities: ["text", "audio"],
+          output_modalities: ["audio"],
+        },
+      ),
+    ).toMatchObject({
+      capabilities: [
+        { key: "audio.audio-input" },
+        { key: "audio.audio-output" },
+        { key: "audio.song-generation" },
+        { key: "audio.tool-calling" },
+        { key: "audio.structured-outputs" },
+      ],
+    });
+  });
+
+  it("maps approved embeddings and rerank capability chips", () => {
+    expect(
+      mapSingleModel(
+        {},
+        {
+          input_modalities: ["text", "image", "file", "audio", "video"],
+          output_modalities: ["embeddings"],
+        },
+      ),
+    ).toMatchObject({
+      capabilities: [
+        { key: "embeddings.text-embeddings" },
+        { key: "embeddings.image-embeddings" },
+        { key: "embeddings.file-embeddings" },
+        { key: "embeddings.audio-embeddings" },
+        { key: "embeddings.video-embeddings" },
+      ],
+    });
+
+    expect(
+      mapSingleModel(
+        {},
+        {
+          input_modalities: ["text", "image"],
+          output_modalities: ["rerank"],
+        },
+      ),
+    ).toMatchObject({
+      capabilities: [
+        { key: "rerank.text-reranking" },
+        { key: "rerank.multimodal-reranking" },
+      ],
+    });
+  });
+
+  it("does not show capability chips for transcription models", () => {
+    expect(
+      mapSingleModel(
+        {},
+        {
+          input_modalities: ["audio"],
+          output_modalities: ["transcription"],
+        },
+      ),
+    ).toMatchObject({
+      capabilities: [],
+    });
   });
 
   it("derives author and model display names from the OpenRouter model name", () => {
