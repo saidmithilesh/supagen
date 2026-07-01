@@ -26,6 +26,32 @@ _Avoid_: Paid invocation, credit invocation, billable invocation
 The final USD amount Supagen applies to a Supagen-funded invocation for AI credit consumption.
 _Avoid_: Provider cost, price, fee
 
+### Providers, Models, And Catalog
+
+**AI Provider**:
+An external AI service or routing network that Supagen can use to execute invocations.
+_Avoid_: Provider, identity provider, payment provider
+
+**AI Gateway**:
+An AI provider that routes invocations to other serving providers and exposes its own model catalog, provider choices, and request-shaping rules.
+_Avoid_: AI provider, model author, provider router
+
+**Upstream Serving Provider**:
+An AI service that actually serves a model behind an AI gateway's routing layer. It may also be an AI provider that Supagen can integrate with directly in a future route.
+_Avoid_: AI gateway, model author, provider
+
+**Model Author**:
+The organization or entity that creates or owns the original AI model lineage, independent of which AI providers serve that model through their APIs.
+_Avoid_: AI provider, vendor, model host
+
+**Catalog Model**:
+An AI model known to Supagen and described by normalized catalog metadata for discovery, validation, routing, and cost-related workflows.
+_Avoid_: Model, database model, frontend model
+
+**Model Catalog**:
+Supagen's owned directory of AI providers and catalog models. It supports public model discovery, pre-invocation validation, routing decisions, and future cost calculation workflows.
+_Avoid_: Frontend catalog, static model list, provider model API
+
 ### Observability
 
 **Observability**:

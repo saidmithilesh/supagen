@@ -5,6 +5,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { getEnvFilePath, validateEnv } from "./config/env";
 import { IamModule } from "./domains/iam/iam.module";
+import { ModelCatalogModule } from "./domains/model-catalog/model-catalog.module";
 import { DatabaseModule } from "./infrastructure/database";
 import { RuntimeTelemetryModule } from "./infrastructure/runtime-telemetry";
 
@@ -20,6 +21,7 @@ import { RuntimeTelemetryModule } from "./infrastructure/runtime-telemetry";
     RuntimeTelemetryModule,
     DatabaseModule,
     IamModule,
+    ModelCatalogModule,
   ],
   controllers: [AppController],
   providers: [AppService],

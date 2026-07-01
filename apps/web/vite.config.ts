@@ -45,10 +45,6 @@ export default defineConfig({
           prerender: { enabled: true, outputPath: "/index.html" },
         },
         {
-          path: "/models",
-          prerender: { enabled: true, outputPath: "/models/index.html" },
-        },
-        {
           path: "/pricing",
           prerender: { enabled: true, outputPath: "/pricing/index.html" },
         },
