@@ -396,15 +396,17 @@ function WorkspaceSwitcher({
 
           <DropdownMenuGroup>
             <DropdownMenuItem
+              asChild
               className="flex cursor-pointer items-center gap-2.5"
-              onSelect={(event) => event.preventDefault()}
             >
-              <MaterialIcon
-                className="text-muted-foreground"
-                name="apps"
-                size={16}
-              />
-              <span>All workspaces</span>
+              <a href="/workspaces">
+                <MaterialIcon
+                  className="text-muted-foreground"
+                  name="apps"
+                  size={16}
+                />
+                <span>All workspaces</span>
+              </a>
             </DropdownMenuItem>
 
             <DropdownMenuItem

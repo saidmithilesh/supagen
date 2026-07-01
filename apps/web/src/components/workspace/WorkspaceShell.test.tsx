@@ -115,7 +115,7 @@ describe(WorkspaceOverviewPage.name, () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("menuitem", { name: "All workspaces" }),
-    ).toBeInTheDocument();
+    ).toHaveAttribute("href", "/workspaces");
     expect(
       screen.getByRole("menuitem", { name: "Create workspace" }),
     ).toBeInTheDocument();

@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root";
+import { Route as WorkspacesRouteImport } from "./routes/workspaces";
 import { Route as TermsRouteImport } from "./routes/terms";
 import { Route as PrivacyRouteImport } from "./routes/privacy";
 import { Route as PricingRouteImport } from "./routes/pricing";
@@ -19,6 +20,11 @@ import { Route as AuthSplatRouteImport } from "./routes/auth.$";
 import { Route as AppWorkspacesWorkspaceIdRouteImport } from "./routes/app_.workspaces.$workspaceId";
 import { Route as AppWorkspacesWorkspaceIdOverviewRouteImport } from "./routes/app_.workspaces.$workspaceId_.overview";
 
+const WorkspacesRoute = WorkspacesRouteImport.update({
+  id: "/workspaces",
+  path: "/workspaces",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const TermsRoute = TermsRouteImport.update({
   id: "/terms",
   path: "/terms",
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   "/pricing": typeof PricingRoute;
   "/privacy": typeof PrivacyRoute;
   "/terms": typeof TermsRoute;
+  "/workspaces": typeof WorkspacesRoute;
   "/auth/$": typeof AuthSplatRoute;
   "/app/workspaces/$workspaceId": typeof AppWorkspacesWorkspaceIdRoute;
   "/app/workspaces/$workspaceId/overview": typeof AppWorkspacesWorkspaceIdOverviewRoute;
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   "/pricing": typeof PricingRoute;
   "/privacy": typeof PrivacyRoute;
   "/terms": typeof TermsRoute;
+  "/workspaces": typeof WorkspacesRoute;
   "/auth/$": typeof AuthSplatRoute;
   "/app/workspaces/$workspaceId": typeof AppWorkspacesWorkspaceIdRoute;
   "/app/workspaces/$workspaceId/overview": typeof AppWorkspacesWorkspaceIdOverviewRoute;
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   "/pricing": typeof PricingRoute;
   "/privacy": typeof PrivacyRoute;
   "/terms": typeof TermsRoute;
+  "/workspaces": typeof WorkspacesRoute;
   "/auth/$": typeof AuthSplatRoute;
   "/app_/workspaces/$workspaceId": typeof AppWorkspacesWorkspaceIdRoute;
   "/app_/workspaces/$workspaceId_/overview": typeof AppWorkspacesWorkspaceIdOverviewRoute;
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | "/pricing"
     | "/privacy"
     | "/terms"
+    | "/workspaces"
     | "/auth/$"
     | "/app/workspaces/$workspaceId"
     | "/app/workspaces/$workspaceId/overview";
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | "/pricing"
     | "/privacy"
     | "/terms"
+    | "/workspaces"
     | "/auth/$"
     | "/app/workspaces/$workspaceId"
     | "/app/workspaces/$workspaceId/overview";
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | "/pricing"
     | "/privacy"
     | "/terms"
+    | "/workspaces"
     | "/auth/$"
     | "/app_/workspaces/$workspaceId"
     | "/app_/workspaces/$workspaceId_/overview";
@@ -144,6 +156,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute;
   PrivacyRoute: typeof PrivacyRoute;
   TermsRoute: typeof TermsRoute;
+  WorkspacesRoute: typeof WorkspacesRoute;
   AuthSplatRoute: typeof AuthSplatRoute;
   AppWorkspacesWorkspaceIdRoute: typeof AppWorkspacesWorkspaceIdRoute;
   AppWorkspacesWorkspaceIdOverviewRoute: typeof AppWorkspacesWorkspaceIdOverviewRoute;
@@ -151,6 +164,13 @@ export interface RootRouteChildren {
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
+    "/workspaces": {
+      id: "/workspaces";
+      path: "/workspaces";
+      fullPath: "/workspaces";
+      preLoaderRoute: typeof WorkspacesRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/terms": {
       id: "/terms";
       path: "/terms";
@@ -224,6 +244,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
+  WorkspacesRoute: WorkspacesRoute,
   AuthSplatRoute: AuthSplatRoute,
   AppWorkspacesWorkspaceIdRoute: AppWorkspacesWorkspaceIdRoute,
   AppWorkspacesWorkspaceIdOverviewRoute: AppWorkspacesWorkspaceIdOverviewRoute,
