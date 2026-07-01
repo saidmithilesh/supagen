@@ -122,6 +122,7 @@ export function WorkspaceSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               <DeveloperNavGroup
+                isCollapsed={isCollapsed}
                 isDeveloperOpen={isDeveloperOpen}
                 onToggleDeveloper={() =>
                   setIsDeveloperOpen((current) => !current)
@@ -301,14 +302,13 @@ function WorkspaceSwitcher({
               </p>
             </div>
 
-            <MaterialIcon
-              className={cn(
-                "shrink-0 text-muted-foreground",
-                isCollapsed && "hidden",
-              )}
-              name="unfold_more"
-              size={16}
-            />
+            {isCollapsed ? null : (
+              <MaterialIcon
+                className="shrink-0 text-muted-foreground"
+                name="unfold_more"
+                size={16}
+              />
+            )}
           </button>
         </DropdownMenuTrigger>
 
@@ -479,10 +479,12 @@ function SidebarNavLink({
 }
 
 function DeveloperNavGroup({
+  isCollapsed,
   isDeveloperOpen,
   onToggleDeveloper,
   workspaceBasePath,
 }: {
+  isCollapsed: boolean;
   isDeveloperOpen: boolean;
   onToggleDeveloper: () => void;
   workspaceBasePath: string;
@@ -499,14 +501,16 @@ function DeveloperNavGroup({
         <span className="truncate group-data-[collapsible=icon]:hidden">
           Developer
         </span>
-        <MaterialIcon
-          className={cn(
-            "ml-auto text-muted-foreground transition-transform duration-150 group-data-[collapsible=icon]:hidden",
-            isDeveloperOpen && "rotate-180",
-          )}
-          name="expand_more"
-          size={18}
-        />
+        {isCollapsed ? null : (
+          <MaterialIcon
+            className={cn(
+              "ml-auto text-muted-foreground transition-transform duration-150",
+              isDeveloperOpen && "rotate-180",
+            )}
+            name="expand_more"
+            size={18}
+          />
+        )}
       </SidebarMenuButton>
 
       {isDeveloperOpen ? (
@@ -551,14 +555,13 @@ function UserMenu({ isCollapsed }: { isCollapsed: boolean }) {
           <span className={cn("truncate", isCollapsed && "sr-only")}>
             {ACCOUNT_NAME}
           </span>
-          <MaterialIcon
-            className={cn(
-              "ml-auto shrink-0 text-muted-foreground",
-              isCollapsed && "hidden",
-            )}
-            name="unfold_more"
-            size={16}
-          />
+          {isCollapsed ? null : (
+            <MaterialIcon
+              className="ml-auto shrink-0 text-muted-foreground"
+              name="unfold_more"
+              size={16}
+            />
+          )}
         </button>
       </DropdownMenuTrigger>
 

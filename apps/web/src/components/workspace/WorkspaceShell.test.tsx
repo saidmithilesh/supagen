@@ -305,6 +305,8 @@ describe(WorkspaceOverviewPage.name, () => {
       "false",
     );
     expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.queryByText("expand_more")).not.toBeInTheDocument();
+    expect(screen.queryByText("unfold_more")).not.toBeInTheDocument();
   });
 });
 
